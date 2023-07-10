@@ -1,0 +1,11 @@
+Metadata-Version: 2.1
+Name: 1on1
+Version: 0.0
+Author: Sohini Bhattacharya
+Author-email: mail.sohinibhattacharya@gmail.com
+Keywords: python,image-classification,active-learning-sampling,question-answering,pre-trained models,tiny-image-net,cifar10
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Intended Audience :: Education
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+License-File: LICENSE
