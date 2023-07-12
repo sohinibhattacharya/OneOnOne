@@ -38,7 +38,6 @@ from torchvision import transforms
 from torch.utils.data import Dataset
 
 
-
 class Classification:
     def __init__(self, date = datetime.datetime.now(), model_type="resnet50", batch_size=16, epochs=250, dataset="cifar10", validation_split=0.3, shuffle_bool=True, early_stopping_patience=10, lr_reducer_patience=10):
 
@@ -48,13 +47,13 @@ class Classification:
         self.shuffle_bool = shuffle
         self.batch_size = batch_size
         self.epochs = epochs
-        self.validation_split = validation_split
-        self.callbacks = self.get_callbacks()
-        self.datagen = self.get_datagen()
         self.output_layer_classes=0
         self.input_shape = (32,32,3)
         self.early_stopping_patience=early_stopping_patience
         self.lr_reducer_patience=lr_reducer_patience
+        self.validation_split = validation_split
+        self.callbacks = self.get_callbacks()
+        self.datagen = self.get_datagen()
 
         if self.dataset=="cifar10":
             self.output_layer_classes = 10
@@ -128,7 +127,6 @@ class Classification:
 
     def feature_extractor(self, inputs):
 
-        global feature_extractor
         if self.model_type == "resnet50":
             feature_extractor = tf.keras.applications.resnet.ResNet50(input_shape=self.input_shape,
                                                                       include_top=False,
@@ -151,6 +149,11 @@ class Classification:
                                                             weights='imagenet', classes=self.output_layer_classes,
                                                             classifier_activation="softmax")(inputs)
         else:
+            feature_extractor = tf.keras.applications.resnet.ResNet50(input_shape=self.input_shape,
+                                                                      include_top=False,
+                                                                      weights='imagenet',
+                                                                      classes=self.output_layer_classes,
+                                                                      classifier_activation="softmax")(inputs)
             print("Invalid argument for model type")
 
         return feature_extractor
@@ -355,7 +358,4 @@ class Classification:
 
     def evaluate(self):
         loss, accuracy = self.model.evaluate(self.val_it, batch_size=self.batch_size, verbose=1)
-
-
-
 

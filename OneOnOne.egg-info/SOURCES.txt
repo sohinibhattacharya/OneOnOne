@@ -1,0 +1,13 @@
+LICENSE
+README.md
+setup.py
+OneOnOne/__init__.py
+OneOnOne/classes.py
+OneOnOne/classification.py
+OneOnOne/contextdecider.py
+OneOnOne/questionanswer.py
+OneOnOne.egg-info/PKG-INFO
+OneOnOne.egg-info/SOURCES.txt
+OneOnOne.egg-info/dependency_links.txt
+OneOnOne.egg-info/requires.txt
+OneOnOne.egg-info/top_level.txt

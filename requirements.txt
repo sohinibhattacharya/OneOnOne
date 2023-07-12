@@ -1,18 +1,19 @@
 # from __future__ import print_function
 
 # from tensorflow.keras.datasets import cifar10
-import numpy as np
-import pandas as pd
-import os, sys, wget
-import math
-import datetime
-import seaborn as sns
-import zipfile
-from zipfile import ZipFile
-import random
+numpy
+pandas
+os
+sys
+wget
+math
+datetime
+seaborn
+zipfile
+random
 
-import tensorflow as tf
-import tensorflow.keras
+tensorflow
+tensorflow.keras
 from tensorflow.keras.models import load_model
 import tensorflow_datasets as tfds
 from tensorflow.python.keras.layers import Input, Dense
@@ -28,20 +29,20 @@ from sklearn.utils import shuffle
 
 
 from scipy.stats import randint
-import matplotlib.pyplot as plt
+matplotlib
 
 from scipy.stats import randint
 from tensorflow.keras.layers import Dense, Flatten
 from sklearn.model_selection import cross_val_score
 from sklearn import metrics
-import torch
+torch
 from torchvision import transforms
 from torch.utils.data import Dataset
 
 from bs4 import BeautifulSoup
-import requests
-import re
-import csv
+requests
+re
+csv
 
 # from transformers import AutoTokenizer, RobertaForQuestionAnswering
 # from transformers import BertForQuestionAnswering, BertTokenizer
