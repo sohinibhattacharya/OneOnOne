@@ -1,3 +1,9 @@
 wget
 numpy
 pandas
+tensorflow==2.12.0
+datetime
+keras==2.12.0
+tensorflow_datasets==4.9.2
+scipy==1.10.1
+tqdm==4.65.0

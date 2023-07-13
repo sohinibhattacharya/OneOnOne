@@ -32,10 +32,24 @@ from sklearn import metrics
 from sklearn import preprocessing
 from sklearn.utils import shuffle
 
-import torch
-from torchvision import transforms
-from torch.utils.data import Dataset
 from tqdm import keras
+
+
+class PretrainedModel:
+    def __init__(self, model_type="resnet50", dataset="cifar10", sampling="none"):
+
+        self.model_type=model_type
+        self.dataset=dataset
+        self.sampling=sampling
+
+        if self.dataset=="tinyimagenet":
+            self.model_type="efficientnetb6"
+            self.sampling="none"
+
+        self.model=load_model(OneOnOne/f"{self.model_type}_{self.dataset}_{self.sampling}")
+
+        self.model.summary()
+
 
 
 class Classification:
