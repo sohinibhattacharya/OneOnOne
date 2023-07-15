@@ -39,10 +39,10 @@ from torch.utils.data import Dataset
 
 
 class Classification:
-    def __init__(self, date = datetime.datetime.now(), model_type="resnet50", batch_size=16, epochs=250, dataset="cifar10", validation_split=0.3, shuffle_bool=True, early_stopping_patience=10, lr_reducer_patience=10):
+    def __init__(self, model_type="resnet50", batch_size=16, epochs=250, dataset="cifar10", validation_split=0.3, shuffle_bool=True, early_stopping_patience=10, lr_reducer_patience=10):
 
         self.model_type = model_type
-        self.date = date
+        self.date = datetime.datetime.now()
         self.dataset=dataset
         self.shuffle_bool = shuffle
         self.batch_size = batch_size
@@ -98,9 +98,9 @@ class Classification:
         elif self.token.lower() == 'load':
             print("loading")
 
-            path_token = input("Model Path?  :   ")
+            print(os.getcwd())
 
-            self.model = load_model(os.getcwd()+path_token)
+            self.model = load_model(os.getcwd()+"models_to_load/"+f'{self.model_type}_{self.dataset}_none')
 
         else:
             print("invalid input")

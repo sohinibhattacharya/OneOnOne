@@ -1,4 +1,5 @@
 import pickle
+import sys
 
 import numpy as np
 import pandas as pd
@@ -9,11 +10,10 @@ import seaborn as sns
 import zipfile
 from zipfile import ZipFile
 import random
-
 import tensorflow as tf
 import tensorflow.keras
 from tensorflow.keras.models import load_model
-import tensorflow_datasets as tfds
+# import tensorflow_datasets as tfds
 from tensorflow.keras.datasets import cifar10
 from tensorflow.python.keras.layers import Input, Dense
 from tensorflow.keras.layers import Dense, Flatten
@@ -24,7 +24,7 @@ from tensorflow.keras.utils import to_categorical
 from tensorflow.compat.v1 import ConfigProto
 from tensorflow.compat.v1 import InteractiveSession
 
-
+from pkg_resources import resource_filename
 from scipy.stats import randint
 
 from sklearn.model_selection import cross_val_score
@@ -33,22 +33,32 @@ from sklearn import preprocessing
 from sklearn.utils import shuffle
 
 from tqdm import keras
-
-
+import urllib.request
+import urllib
+import pkgutil
+# from urllib.request import urlretrieve
+# from urllib import urlretrieve
 class PretrainedModel:
-    def __init__(self, model_type="resnet50", dataset="cifar10", sampling="none"):
+    def __init__(self, model_type="resnet50", dataset="cifar10", samplingtype="none"):
 
         self.model_type=model_type
         self.dataset=dataset
-        self.sampling=sampling
+        self.samplingtype=samplingtype
 
         if self.dataset=="tinyimagenet":
             self.model_type="efficientnetb6"
-            self.sampling="none"
+            self.samplingtype="none"
 
-        self.model=load_model(OneOnOne/f"{self.model_type}_{self.dataset}_{self.sampling}")
+        if self.samplingtype=="none" or self.samplingtype=="None":
+            self.path=os.getcwd()+f'/models_to_load/{self.model_type}_{self.dataset}'
+        else:
+            self.path=os.getcwd()+f'/models_to_load/{self.model_type}_{self.dataset}_{self.samplingtype}'
 
+        self.model=urllib.request.urlretrieve('https://github.com/sohini-bhattacharya/OneOnOne/tree/master/OneOnOne/resnet50_cifar10_none',f"{self.model_type}_{self.dataset}_none")
+        # self.model=load_model(self.path)
+        print(self.model)
         self.model.summary()
+
 
 
 
@@ -101,7 +111,7 @@ class Classification:
                                      epochs=self.epochs, verbose=1, workers=4,
                                      callbacks=self.callbacks)
 
-            self.model.save(os.getcwd()+f"/fully_trained/{self.model_type}_{self.dataset}_{self.date}")
+            self.model.save(os.getcwd()+f"/saved_models/{self.model_type}_{self.dataset}_{self.date}_completed")
 
             history_token = input("Save/Discard?  :   ")
 
@@ -117,9 +127,7 @@ class Classification:
         elif self.token.lower() == 'load':
             print("loading")
 
-            path_token = input("Model Path?  :   ")
-
-            self.model = load_model(os.getcwd()+path_token)
+            self.model = load_model(os.getcwd()+"/models_to_load/"+f"{self.model_type}_{self.dataset}")
 
         else:
             print("invalid input")
@@ -225,7 +233,7 @@ class Classification:
 
     def get_callbacks(self):
 
-        save_dir = os.path.join(os.getcwd(), f'saved_models_{self.model_type}_{self.dataset}_{self.date}')
+        save_dir = os.getcwd()+f'/saved_models/{self.model_type}_{self.dataset}'
         model_name = self.model_type + '_model_' + str(self.date.day) + '_' + str(self.date.month) + '_' + str(
             self.date.year) + '.{epoch:03d}.h5'
 
@@ -302,9 +310,27 @@ class Classification:
             # class_mode='categorical',
             print(number_of_train_samples)
             print(number_of_val_samples)
-        elif self.dataset=="cifar10":
-            (train_it), (val_it) = tf.keras.datasets.cifar10.load_data()
-            self.datagen.fit(train_it)
+        elif self.dataset == "cifar10":
+            classes = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
+            num_classes = len(classes)
+            (training_images, training_labels), (
+                    validation_images, validation_labels) = tf.keras.datasets.cifar10.load_data()
+
+            train_X = self.preprocess_image_input(training_images)
+            valid_X = self.preprocess_image_input(validation_images)
+
+            training_labels = to_categorical(training_labels, num_classes)
+            validation_labels = to_categorical(validation_labels, num_classes)
+            self.datagen.fit(train_X)
+
+            train_it = self.datagen.flow(train_X, training_labels, batch_size=self.batch_size)
+            val_it = (valid_X, validation_labels)
+
+            # self.X_train = train_X
+            # self.X_test = valid_X
+            # self.y_train = training_labels
+            # self.y_test = validation_labels
+
 
 
         return train_it, val_it
@@ -339,24 +365,23 @@ class Sampling:
     def __init__(self, samplingtype, dataset="cifar10", model_type = "resnet50", goal=99, jump=5000, first_data_samples=10000, batch_size = 16, epochs = 250, shuffle_bool = True, early_stopping_patience = 10, lr_reducer_patience = 10):
 
         self.validation_split=0
-        self.samplingtype = samplingtype
-        self.dataset = dataset
-        self.goal = goal
-        self.date=datetime.datetime.now()
+        self.model_type = model_type
         self.epochs=epochs
         self.jump = jump
-        self.first_data_samples = first_data_samples
-        self.model_type = model_type
-        self.callbacks = self.get_callbacks()
-        self.datagen = self.get_datagen()
-        self.train_it, self.val_it = self.get_dataset()
+        self.samplingtype = samplingtype
+        self.goal = goal
         self.shuffle_bool = shuffle
         self.batch_size = batch_size
+        self.dataset = dataset
         self.output_layer_classes = 0
         self.input_shape = (32, 32, 3)
+        self.date=datetime.datetime.now()
+        self.first_data_samples = first_data_samples
         self.early_stopping_patience = early_stopping_patience
         self.lr_reducer_patience = lr_reducer_patience
         self.callbacks = self.get_callbacks()
+        self.datagen = self.get_datagen()
+        self.train_it, self.val_it = self.get_dataset()
 
         if self.dataset == "cifar10" or self.dataset == "mnist":
             self.output_layer_classes = 10
@@ -479,13 +504,14 @@ class Sampling:
 
     def get_callbacks(self):
 
-        save_dir = os.path.join(os.getcwd(), f'saved_models_{self.model_type}_{self.dataset}_{self.date}')
+        save_dir = os.getcwd()+f'/saved_models/{self.model_type}_{self.dataset}_{self.samplingtype}'
         model_name = self.model_type + '_model_' + str(self.date.day) + '_' + str(self.date.month) + '_' + str(
             self.date.year) + '.{epoch:03d}.h5'
 
         if not os.path.isdir(save_dir):
             os.makedirs(save_dir)
         filepath = os.path.join(save_dir, model_name)
+
         checkpoint = ModelCheckpoint(filepath=filepath,
                                      monitor='val_accuracy',
                                      verbose=1,
@@ -728,8 +754,6 @@ class Sampling:
 
     # def load_trained_model(self):
 
-
-
     def initial_training(self):
 
         print("training")
@@ -742,7 +766,7 @@ class Sampling:
                                      epochs=self.epochs, verbose=1, workers=4,
                                      callbacks=self.callbacks)
 
-            self.model.save(os.getcwd() + f"/initial_training/{self.model_type}_{self.dataset}_{self.first_data_samples}_{self.date}")
+            self.model.save(os.getcwd() + f"/saved_models/{self.model_type}_{self.dataset}_{self.samplingtype}_{self.first_data_samples}_{self.date}_initial_training")
 
 
             with open(f'{self.model_type}_{self.dataset}_{self.date}_history', 'wb') as file_pi:
@@ -757,6 +781,11 @@ class Sampling:
             history = self.model.fit(self.datagen.flow(self.X_train, self.y_train, batch_size=self.batch_size), validation_data=(self.X_test, self.y_test),
                                      epochs=self.epochs, verbose=1, workers=4,
                                      callbacks=self.callbacks)
+            self.model.save(os.getcwd() + f"/saved_models/{self.model_type}_{self.dataset}_{self.samplingtype}_{self.first_data_samples}_{self.date}_initial_training")
+
+            with open(f'{self.model_type}_{self.dataset}_{self.date}_history', 'wb') as file_pi:
+                pickle.dump(history.history, file_pi)
+            print("saved")
 
 
 
@@ -848,6 +877,8 @@ class Sampling:
 
             X_train_copy=X_train_copy[a]
             y_train_copy=y_train_copy[a]
+
+        self.model.save(os.getcwd() + f"/saved_models/{self.model_type}_{self.dataset}_{self.samplingtype}_{self.date}_completed")
 
         return history_data,epoch_data,batch_size_data,acuracy_data
 
