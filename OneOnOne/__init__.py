@@ -36,8 +36,8 @@ from tqdm import keras
 import urllib.request
 import urllib
 import pkgutil
-import requests, zipfile, io
-import tarfile
+import requests, zipfile
+from io import BytesIO
 
 
 class PretrainedModel:
@@ -56,17 +56,23 @@ class PretrainedModel:
         else:
             self.path=os.getcwd()+f'/models_to_load/{self.model_type}_{self.dataset}_{self.samplingtype}'
 
-        url='https://github.com/sohini-bhattacharya/OneOnOne/blob/b28474139b36ae90adc7a17cbc73d318571e8846/saved_models/resnet50_cifar10_none.zip'
+        url='https://github.com/sohini-bhattacharya/OneOnOne/blob/master/models_to_load/resnet50_cifar10_none.zip'
+        # url='https://github.com/sohini-bhattacharya/OneOnOne/blob/9f683affbaa1c4a67252f20b75b65b686319f103/models_to_load/resnet50_cifar10_none.zip'
+        model_ = wget.download(url, out=os.getcwd())
 
-        req = requests.get(url)
+        for file in os.listdir(os.getcwd()):
+            if file.endswith("resnet50_cifar10_none.zip"):
+                zip_file = ZipFile(file)
+                zip_file.extract()
+            else:
+                print("not found")
+        # with zipfile.ZipFile(zip_path, "r") as f:
+        #     f.extractall()
 
-        filename = url.split('/')[-1]
+        # Creating a new file to store the zip file links
 
-        with open(filename, 'wb') as output_file:
-            output_file.write(req.content)
-        print('Download Completed')
 
-        # model_zip = wget.download(url, out=os.getcwd()+'/models_to_load')
+        # wget.download(url, out=os.getcwd())
 
         # self.model=load_model(f"{self.path}_testing")
         # self.model.summary()
