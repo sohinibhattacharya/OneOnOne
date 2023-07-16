@@ -36,8 +36,10 @@ from tqdm import keras
 import urllib.request
 import urllib
 import pkgutil
-# from urllib.request import urlretrieve
-# from urllib import urlretrieve
+import requests, zipfile, io
+import tarfile
+
+
 class PretrainedModel:
     def __init__(self, model_type="resnet50", dataset="cifar10", samplingtype="none"):
 
@@ -54,11 +56,20 @@ class PretrainedModel:
         else:
             self.path=os.getcwd()+f'/models_to_load/{self.model_type}_{self.dataset}_{self.samplingtype}'
 
-        self.model=urllib.request.urlretrieve('https://github.com/sohini-bhattacharya/OneOnOne/tree/master/OneOnOne/resnet50_cifar10_none',f"{self.model_type}_{self.dataset}_none")
-        # self.model=load_model(self.path)
-        print(self.model)
-        self.model.summary()
+        url='https://github.com/sohini-bhattacharya/OneOnOne/blob/b28474139b36ae90adc7a17cbc73d318571e8846/saved_models/resnet50_cifar10_none.zip'
 
+        req = requests.get(url)
+
+        filename = url.split('/')[-1]
+
+        with open(filename, 'wb') as output_file:
+            output_file.write(req.content)
+        print('Download Completed')
+
+        # model_zip = wget.download(url, out=os.getcwd()+'/models_to_load')
+
+        # self.model=load_model(f"{self.path}_testing")
+        # self.model.summary()
 
 
 
