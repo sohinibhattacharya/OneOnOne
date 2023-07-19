@@ -6,7 +6,7 @@ You can simply opt for training your own models from scratch by just tweaking a 
 
 If you want to try popular active-learning sampling methods on image classification, don't worry! This library has got you covered.
 
-Along with that for simple-bridging and basic into NLP, we have context-deciders, HTML parsers and simple chatbot object classes, to create an interface similar to Google Lens.  
+Along with that for simple-bridging of NLP with Image Classification and utilization of basic use-cases of NLP frameworks, we have context-deciders, HTML parsers and simple chatbot object classes, to create an interface similar to Google Lens.  
 
 You input an image or item that you are curious about and you can ask one-on-one questions from the chatbot. This is made possible by using the tiny imagenet dataset.
 
@@ -27,15 +27,27 @@ pip install OneOnOne
 </dl>
 
 ~~~~
-classifier=OneOnOne.Classification()
+from OneOnOne import Classification
+classifier=Classification(validation_split=0.4,early_stopping_patience=20)
 ~~~~
+
 <dl>
   <dt><span style="color:#FFC0CB">or,</span>
 </dl>
 
 ~~~~
-sampling=OneOnOne.Sampling()
+from OneOnOne import Sampling
+sampling=Sampling("entropy")
 sampling.initial_training()
+~~~~
+
+<dl>
+  <dt><span style="color:#FFC0CB">or, download pretrained models with your desired specifications!</span>
+</dl>
+
+~~~~
+from OneOnOne import PretrainedModel
+pretrained=PretrainedModel(model_type="resnet50", dataset="cifar10", samplingtype="leastconfidence")
 ~~~~
 
 
