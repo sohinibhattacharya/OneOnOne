@@ -34,10 +34,11 @@ from sklearn.utils import shuffle
 
 from transformers import pipeline
 from transformers import BlipProcessor, BlipForQuestionAnswering
-from transformers import GPT2Config, GPT2Model, GPT2Tokenizer
+from transformers import AutoTokenizer, GPT2Model
 from transformers import AutoTokenizer, AutoModel
 from transformers import AutoTokenizer, RobertaForQuestionAnswering
 from transformers import BertForQuestionAnswering, BertTokenizer
+from transformers import AutoTokenizer, ErnieModel
 import torch
 from torchvision import transforms
 
@@ -1124,16 +1125,15 @@ class QuestionAnswer:
         self.chatbot = chatbot.lower()
 
         if self.chatbot == "bert":
-            self.model = BertForQuestionAnswering.from_pretrained(
-                'bert-large-uncased-whole-word-masking-finetuned-squad')
+            self.model = BertForQuestionAnswering.from_pretrained('bert-large-uncased-whole-word-masking-finetuned-squad')
             self.tokenizer = BertTokenizer.from_pretrained('bert-large-uncased-whole-word-masking-finetuned-squad')
 
         elif self.chatbot == "gpt2":
-            self.model = GPT2LMHeadModel.from_pretrained("gpt2")
+            self.model = GPT2Model.from_pretrained("gpt2")
             self.tokenizer = AutoTokenizer.from_pretrained("gpt2")
 
         elif self.chatbot == "ernie":
-            self.model = AutoModel.from_pretrained("nghuyong/ernie-1.0-base-zh")
+            self.model = ErnieModel.from_pretrained("nghuyong/ernie-1.0-base-zh")
             self.tokenizer = AutoTokenizer.from_pretrained("nghuyong/ernie-1.0-base-zh")
 
         elif self.chatbot == "roberta":
@@ -1149,9 +1149,11 @@ class QuestionAnswer:
 
     def question_answer(self, question):
 
-        input_ids = self.tokenizer.encode(question, self.context)
+        # input_ids = self.tokenizer.encode(question, self.context)
 
-        tokens = self.tokenizer.convert_ids_to_tokens(input_ids)
+        # tokens = self.tokenizer.convert_ids_to_tokens(input_ids)
+
+        tokens = token.tokenize(text, max_length=MAX_TOKENS, truncation=True)
 
         sep_idx = input_ids.index(self.tokenizer.sep_token_id)
 

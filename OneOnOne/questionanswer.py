@@ -9,16 +9,15 @@ class QuestionAnswer:
         self.chatbot = chatbot.lower()
 
         if self.chatbot == "bert":
-            self.model = BertForQuestionAnswering.from_pretrained(
-                'bert-large-uncased-whole-word-masking-finetuned-squad')
+            self.model = BertForQuestionAnswering.from_pretrained('bert-large-uncased-whole-word-masking-finetuned-squad')
             self.tokenizer = BertTokenizer.from_pretrained('bert-large-uncased-whole-word-masking-finetuned-squad')
 
         elif self.chatbot == "gpt2":
-            self.model = GPT2LMHeadModel.from_pretrained("gpt2")
+            self.model = GPT2Model.from_pretrained("gpt2")
             self.tokenizer = AutoTokenizer.from_pretrained("gpt2")
 
         elif self.chatbot == "ernie":
-            self.model = AutoModel.from_pretrained("nghuyong/ernie-1.0-base-zh")
+            self.model = ErnieModel.from_pretrained("nghuyong/ernie-1.0-base-zh")
             self.tokenizer = AutoTokenizer.from_pretrained("nghuyong/ernie-1.0-base-zh")
 
         elif self.chatbot == "roberta":
@@ -26,7 +25,7 @@ class QuestionAnswer:
             self.tokenizer = AutoTokenizer.from_pretrained("deepset/roberta-base-squad2")
 
         elif self.chatbot == "vqa":
-            self.model = BlipProcessor.from_pretrained("Salesforce/blip-vqa-base")
+            self.tokenizer = BlipProcessor.from_pretrained("Salesforce/blip-vqa-base")
             self.model = BlipForQuestionAnswering.from_pretrained("Salesforce/blip-vqa-base").to("cuda")
 
         else:

@@ -12,6 +12,8 @@ A library meant to simplify your life by providing you with pre-trained models l
 You can simply opt for training your own models from scratch by just tweaking a few values. If you want to try popular active-learning sampling methods on image classification, don't worry! This library has got you covered. Along with that for simple-bridging of NLP with Image Classification and utilization of basic use-cases of NLP frameworks, we have context-deciders, HTML parsers and simple chatbot object classes, to create an interface similar to Google Lens. You input an image or item that you are curious about, and you can ask one-on-one questions from the chatbot. This is made possible by using the tiny imagenet dataset.
 </h4>
 
+<h4 align="center">____________________________________________________________________________</h4>
+
 <dl>
   <dt><span style="color:#FFC0CB">How to import the library?</span></dt>
     <dd>Just run the following command on your terminal or online coding interface.
@@ -56,8 +58,11 @@ from OneOnOne import PretrainedModel
 pretrained=PretrainedModel(model_type="resnet50", dataset="cifar10", samplingtype="leastconfidence")
 ```
 
-<details>
-<summary>More Examples</summary>
+<h4 align="center">____________________________________________________________________________</h4>
+
+
+<h4>More Examples on NLP use-cases:</h4>
+
 <dl>
   <dt><span style="color:#FFC0CB">If you want your predicted class(es) of the input image to be used as the context for your chatbot, simply run, </span>
 </dl>
@@ -83,9 +88,12 @@ text=parser.get_context_text()
 qa=QuestionAnswer(text,"bert")
 qa.ask()
 ```
-</details>
 
-This library is being actively updated and new features are being added frequently.
-New datasets and pre-trained models will be updated soon. Any bugs detected will be fixed <span style="color:#FFC0CB">asap.</span>
+
+<h4 align="center">____________________________________________________________________________</h4>
+
+
+This library is being actively updated and new features are being added frequently. New datasets and pre-trained models will be updated soon. Any bugs detected will be fixed asap.
 
 Feel free to share your feedback! I would really appreciate it! ❤️️
+
