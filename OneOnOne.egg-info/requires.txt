@@ -1,4 +1,6 @@
 wget
+torch
+transformers
 gdown
 numpy
 pandas

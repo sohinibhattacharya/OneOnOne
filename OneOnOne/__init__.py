@@ -32,9 +32,18 @@ from sklearn import metrics
 from sklearn import preprocessing
 from sklearn.utils import shuffle
 
+from transformers import pipeline
+from transformers import BlipProcessor, BlipForQuestionAnswering
+from transformers import GPT2Config, GPT2Model, GPT2Tokenizer
+from transformers import AutoTokenizer, AutoModel
+from transformers import AutoTokenizer, RobertaForQuestionAnswering
+from transformers import BertForQuestionAnswering, BertTokenizer
+import torch
+from torchvision import transforms
+
+from bs4 import BeautifulSoup
+import re
 from tqdm import keras
-import urllib.request
-import urllib
 import pkgutil
 import requests, zipfile
 from io import BytesIO
@@ -43,11 +52,11 @@ import gdown
 class PretrainedModel:
     def __init__(self, model_type="resnet50", dataset="cifar10", samplingtype="none"):
 
-        self.model_type=model_type
-        self.dataset=dataset
-        self.samplingtype=samplingtype
+        self.model_type=model_type.lower()
+        self.dataset=dataset.lower()
+        self.samplingtype=samplingtype.lower()
 
-        self.map={"resnet50_cifar10_none":"1YVG0lAnpBfM_MB7ctV1vHcslb6O-3Vbm","resnet50_cifar10_leastconfidence":"1fSJYo5VOppTkgWb-Fu2Sf_JL4s9JUmoK","resnet50_cifar10_mixed":"","resnet50_cifar10_margin":"","efficientnetb6_cifar10_none":"","efficientnetb6_tinyimagenet_none":""}
+        self.map={"resnet50_cifar10_none":"1YVG0lAnpBfM_MB7ctV1vHcslb6O-3Vbm","resnet50_cifar10_leastconfidence":"1fSJYo5VOppTkgWb-Fu2Sf_JL4s9JUmoK","resnet50_cifar10_mixed":"","resnet50_cifar10_margin":"","efficientnetb6_cifar10_none":"16Wqfx7mcEhssZksF1yUAUEG6mkhMSeme","efficientnetb6_tinyimagenet_none":"1pGX8zB99ugqcvPohxykPC1JLM0Ld0L-D"}
 
         if self.dataset=="tinyimagenet":
             self.model_type="efficientnetb6"
@@ -83,9 +92,9 @@ class PretrainedModel:
 class Classification:
     def __init__(self, model_type="resnet50", batch_size=16, epochs=250, dataset="cifar10", validation_split=0.3, shuffle_bool=True, early_stopping_patience=10, lr_reducer_patience=10):
 
-        self.model_type = model_type
+        self.model_type = model_type.lower()
         self.date=datetime.datetime.now()
-        self.dataset=dataset
+        self.dataset=dataset.lower()
         self.shuffle_bool = shuffle
         self.batch_size = batch_size
         self.epochs = epochs
@@ -101,6 +110,9 @@ class Classification:
             self.output_layer_classes = 10
             self.input_shape = (224,224,3)
 
+        elif self.dataset == "cifar100":
+            self.output_layer_classes = 100
+            self.input_shape = (224, 224, 3)
 
         elif self.dataset=="tinyimagenet":
             self.output_layer_classes = 200
@@ -114,8 +126,8 @@ class Classification:
         self.token=input("Train/Load?  :   ")
         self.train_it, self.val_it = self.get_dataset()
 
-        if self.token.lower() == 'train':
-            print("training")
+        if self.token.lower()=='train':
+            print("Training...")
 
             self.model = self.define_compile_model()
             self.model.summary()
@@ -137,19 +149,21 @@ class Classification:
             if history_token.lower()=="save":
                 with open(f'{self.model_type}_{self.dataset}_{self.date}_history', 'wb') as file_pi:
                     pickle.dump(history.history, file_pi)
-                print("saved")
+                print("Saved.")
             elif history_token.lower()=="save":
-                print("discarded")
+                print("Discarded.")
             else:
                 print("Invalid Input!")
 
         elif self.token.lower() == 'load':
-            print("loading")
+            print("Loading...")
 
             self.model = load_model(os.getcwd()+"/models_to_load/"+f"{self.model_type}_{self.dataset}")
 
+            PRINT("Loading Completed.")
+
         else:
-            print("invalid input")
+            print("Invalid Input!")
 
     def lr_schedule(self, epoch):
         lr = 1e-3
@@ -161,7 +175,7 @@ class Classification:
             lr *= 1e-2
         elif epoch > 80:
             lr *= 1e-1
-        print('Learning rate: ', lr)
+        print('Learning Rate: ', lr)
 
         return lr
 
@@ -200,7 +214,7 @@ class Classification:
                                                                       weights='imagenet',
                                                                       classes=self.output_layer_classes,
                                                                       classifier_activation="softmax")(inputs)
-            print("Invalid argument for model type")
+            print("Invalid argument for model type.")
 
         return feature_extractor
 
@@ -303,24 +317,24 @@ class Classification:
 
     def download_dataset(self):
 
-        print("extracting")
+        print("Extracting...")
         if not 'tiny-imagenet-200.zip' in os.listdir(os.getcwd()):
             url = 'http://cs231n.stanford.edu/tiny-imagenet-200.zip'
-            tiny_imgdataset = wget.download('http://cs231n.stanford.edu/tiny-imagenet-200.zip', out=os.getcwd())
+            tiny_imgdataset = wget.download(url, out=os.getcwd())
 
         for file in os.listdir(os.getcwd()):
             if file.endswith("tiny-imagenet-200.zip"):
                 zip_file = ZipFile(file)
                 zip_file.extractall()
-            else:
-                print("not found")
+
+        print("Done.")
 
     def get_dataset(self):
 
         if self.dataset=="tinyimagenet":
-            train_it = self.datagen.flow_from_directory('/home/sb355/testing/tiny-imagenet-200/train',
+            train_it = self.datagen.flow_from_directory(os.getcwd()+'tiny-imagenet-200/train',
                                                         batch_size=self.batch_size, subset="training", shuffle=self.shuffle_bool)
-            val_it = self.datagen.flow_from_directory('/home/sb355/testing/tiny-imagenet-200/train', batch_size=self.batch_size,
+            val_it = self.datagen.flow_from_directory(os.getcwd()+'tiny-imagenet-200/train', batch_size=self.batch_size,
                                                       subset="validation", shuffle=self.shuffle_bool)
             train_filenames = train_it.filenames
             val_filenames = val_it.filenames
@@ -399,14 +413,14 @@ class Sampling:
     def __init__(self, samplingtype, dataset="cifar10", model_type = "resnet50", goal=99, jump=5000, first_data_samples=10000, batch_size = 16, epochs = 250, shuffle_bool = True, early_stopping_patience = 10, lr_reducer_patience = 10):
 
         self.validation_split=0
-        self.model_type = model_type
+        self.model_type = model_type.lower()
         self.epochs=epochs
         self.jump = jump
-        self.samplingtype = samplingtype
+        self.samplingtype = samplingtype.lower()
         self.goal = goal
         self.shuffle_bool = shuffle
         self.batch_size = batch_size
-        self.dataset = dataset
+        self.dataset = dataset.lower()
         self.output_layer_classes = 0
         self.input_shape = (32, 32, 3)
         self.date=datetime.datetime.now()
@@ -445,7 +459,7 @@ class Sampling:
             lr *= 1e-2
         elif epoch > 80:
             lr *= 1e-1
-        print('Learning rate: ', lr)
+        print('Learning Rate: ', lr)
 
         return lr
 
@@ -486,7 +500,7 @@ class Sampling:
                                                                       weights='imagenet',
                                                                       classes=self.output_layer_classes,
                                                                       classifier_activation="softmax")(inputs)
-            print("Invalid argument for model type")
+            print("Invalid argument for model type.")
 
         return feature_extractor
 
@@ -597,25 +611,25 @@ class Sampling:
 
     def download_dataset(self):
 
-        print("extracting")
+        print("Extracting...")
         if not 'tiny-imagenet-200.zip' in os.listdir(os.getcwd()):
             url = 'http://cs231n.stanford.edu/tiny-imagenet-200.zip'
-            tiny_imgdataset = wget.download('http://cs231n.stanford.edu/tiny-imagenet-200.zip', out=os.getcwd())
+            tiny_imgdataset = wget.download(url, out=os.getcwd())
 
         for file in os.listdir(os.getcwd()):
             if file.endswith("tiny-imagenet-200.zip"):
                 zip_file = ZipFile(file)
                 zip_file.extractall()
-            else:
-                print("not found")
+
+        print("Done.")
 
     def get_dataset(self):
 
         if self.dataset == "tinyimagenet":
-            train_it = self.datagen.flow_from_directory('/home/sb355/testing/tiny-imagenet-200/train',
+            train_it = self.datagen.flow_from_directory(os.getcwd()+'tiny-imagenet-200/train',
                                                         batch_size=self.batch_size, subset="training",
                                                         shuffle=self.shuffle_bool)
-            val_it = self.datagen.flow_from_directory('/home/sb355/testing/tiny-imagenet-200/train',
+            val_it = self.datagen.flow_from_directory(os.getcwd()+'tiny-imagenet-200/train',
                                                       batch_size=self.batch_size,
                                                       subset="validation", shuffle=self.shuffle_bool)
             train_filenames = train_it.filenames
@@ -630,7 +644,7 @@ class Sampling:
 
             shuffle_random_token = input("Do you want to shuffle the training data? (yes/no):  ")
 
-            if shuffle_random_token == "yes":
+            if shuffle_random_token.lower() == "yes":
                 seed_token = input("Enter random seed (int):  ")
             else:
                 seed_token = float('inf')
@@ -790,7 +804,7 @@ class Sampling:
 
     def initial_training(self):
 
-        print("training")
+        print("Training...")
 
         if self.dataset=="tinyimagenet":
             self.model = self.define_compile_model()
@@ -805,7 +819,7 @@ class Sampling:
 
             with open(f'{self.model_type}_{self.dataset}_{self.date}_history', 'wb') as file_pi:
                 pickle.dump(history.history, file_pi)
-            print("saved")
+            print("Saved.")
 
         else:
 
@@ -819,7 +833,7 @@ class Sampling:
 
             with open(f'{self.model_type}_{self.dataset}_{self.date}_history', 'wb') as file_pi:
                 pickle.dump(history.history, file_pi)
-            print("saved")
+            print("saved.")
 
 
 
@@ -868,7 +882,7 @@ class Sampling:
               values_lc = self.get_lc(y_predicted)
               values_hc = self.get_hc(y_predicted)
             else:
-              print("Input Error.")
+              print("Invalid Input!")
 
             index = []
 
@@ -915,6 +929,276 @@ class Sampling:
         self.model.save(os.getcwd() + f"/trained_models/{self.model_type}_{self.dataset}_{self.samplingtype}_{self.date}_completed")
 
         return history_data,epoch_data,batch_size_data,acuracy_data
+
+class HTMLparser:
+    def __init__(self, words):
+        self.words = words
+    def clean_html(self,raw_html):
+        clean_brackets = re.compile('<.*?>')
+        cleantext = re.sub(clean_brackets, '', raw_html)
+        cleantext = re.sub(' ,', '', cleantext)
+        cleantext = re.sub('\n', '', cleantext)
+        cleantext = cleantext.replace('\\', '')
+
+        return cleantext
+
+    def produce_text(self,word):
+        link = "https://en.wikipedia.org/wiki/" + word
+
+        page = requests.get(link)
+        soup = BeautifulSoup(page.content, 'html.parser')
+
+        p=soup.find_all('p')
+
+        context=str(p)
+
+        cleaned_text=self.clean_html(context)
+
+        return cleaned_text
+
+
+    def get_context_text(self):
+
+        full_context = ""
+
+        for word in self.words:
+
+            text_for_one_word = self.produce_text(word)
+            full_context = full_context + text_for_one_word[3:-1]
+
+        return full_context
+
+
+class ContextDecider:
+    def __int__(self, dataset="tinyimagenet", model_type="efficientnetb6", samplingtype="none", threshold=0.2):
+        self.dataset = dataset.lower()
+        self.model_type = model_type.lower()
+        self.threshold = threshold
+        self.samplingtype = samplingtype
+
+        if self.dataset == "cifar10" or self.dataset == "mnist":
+            self.output_layer_classes = 10
+            self.input_shape = (224, 224, 3)
+
+        elif self.dataset == "cifar100":
+            self.output_layer_classes = 100
+            self.input_shape = (224, 224, 3)
+
+        elif self.dataset == "tinyimagenet":
+            self.output_layer_classes = 200
+            self.input_shape = (32, 32, 3)
+            from classes import i2d
+            self.download_dataset()
+
+        else:
+            print("Invalid Input!")
+
+        self.train_it, self.val_it = self.get_dataset()
+
+        self.pretrained = PretrainedModel(model_type=self.model_type, dataset=self.dataset,
+                                          samplingtype=self.samplingtype)
+        # self.pretrained.model
+        self.pred = self.pretrained.model.predict_generator(self.val_it, 1)
+
+    def decide_context(self):
+
+        predicted_list = []
+        classes_prob_list = []
+        prediction_index = []
+        final_classes = []
+
+        output = []
+
+        labels = self.val_it.class_indices
+        labels2 = dict((v, k) for k, v in labels.items())
+
+        print(f"{self.pred.shape[0]}")
+        for i in range(0, self.pred.shape[0]):
+            classes_prob_list = []
+            for j in range(0, self.output_layer_classes):
+                classes_prob_list.append([int(j), self.pred[i][j]])
+
+            classes_prob_list.sort(key=lambda x: x[1], reverse=True)
+
+            first_highest_predicted_classes = classes_prob_list[0][0]
+            first_highest_predicted_class_confidence = classes_prob_list[0][1]
+
+            second_highest_predicted_classes = classes_prob_list[1][0]
+            second_highest_predicted_class_confidence = classes_prob_list[1][1]
+
+            predicted_list.append([first_highest_predicted_classes, first_highest_predicted_class_confidence,
+                                   second_highest_predicted_classes, second_highest_predicted_class_confidence])
+
+        if (predicted_list[0][1] - predicted_list[0][3]) >= self.threshold:
+            prediction_index.append(predicted_list[0][0])
+        elif (predicted_list[0][1] - predicted_list[0][3]) < self.threshold:
+            prediction_index.append(predicted_list[0][0])
+            prediction_index.append(predicted_list[0][2])
+
+        for i in range(0, len(prediction_index)):
+            final_classes.append(i2d[labels2[prediction_index[i]]])
+
+        for ele in final_classes:
+            b = ele.split(',')
+            output = output + b
+
+        return output
+
+    def download_dataset(self):
+
+        print("extracting")
+        if not 'tiny-imagenet-200.zip' in os.listdir(os.getcwd()):
+            url = 'http://cs231n.stanford.edu/tiny-imagenet-200.zip'
+            tiny_imgdataset = wget.download(url, out=os.getcwd())
+
+        for file in os.listdir(os.getcwd()):
+            if file.endswith("tiny-imagenet-200.zip"):
+                zip_file = ZipFile(file)
+                zip_file.extractall()
+
+    def get_dataset(self):
+
+        if self.dataset == "tinyimagenet":
+            train_it = self.datagen.flow_from_directory(os.getcwd() + 'tiny-imagenet-200/train',
+                                                        batch_size=self.batch_size, subset="training",
+                                                        shuffle=self.shuffle_bool)
+            val_it = self.datagen.flow_from_directory(os.getcwd() + 'tiny-imagenet-200/train',
+                                                      batch_size=self.batch_size,
+                                                      subset="validation", shuffle=self.shuffle_bool)
+            train_filenames = train_it.filenames
+            val_filenames = val_it.filenames
+            number_of_val_samples = len(val_filenames)
+            number_of_train_samples = len(train_filenames)
+            # class_mode='categorical',
+            print(number_of_train_samples)
+            print(number_of_val_samples)
+        else:
+            if self.dataset == "cifar10":
+                classes = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
+                num_classes = len(classes)
+                (training_images, training_labels), (
+                    validation_images, validation_labels) = tf.keras.datasets.cifar10.load_data()
+
+                train_X = self.preprocess_image_input(training_images)
+                valid_X = self.preprocess_image_input(validation_images)
+
+            elif self.dataset == "mnist":
+                num_classes = 10
+                (training_images, training_labels), (
+                    validation_images, validation_labels) = tf.keras.datasets.mnist.load_data()
+
+                train_X = self.preprocess_image_input(training_images)
+                valid_X = self.preprocess_image_input(validation_images)
+
+            elif self.dataset == "cifar100":
+                num_classes = 100
+                (training_images, training_labels), (
+                    validation_images, validation_labels) = tf.keras.datasets.cifar100.load_data()
+
+                train_X = self.preprocess_image_input(training_images)
+                valid_X = self.preprocess_image_input(validation_images)
+
+            training_labels = to_categorical(training_labels, num_classes)
+            validation_labels = to_categorical(validation_labels, num_classes)
+            self.datagen.fit(train_X)
+
+            train_it = self.datagen.flow(train_X, training_labels, batch_size=self.batch_size)
+            val_it = (valid_X, validation_labels)
+
+            self.X_train = train_X
+            self.X_test = valid_X
+            self.y_train = training_labels
+            self.y_test = validation_labels
+
+        return train_it, val_it
+
+
+class QuestionAnswer:
+    def __init__(self, context, chatbot="bert"):
+
+        self.exit_commands = ("no", "n", "quit", "pause", "exit", "goodbye", "bye", "later", "stop")
+        self.positive_commands = ("y", "yes", "yeah", "sure", "yup", "ya", "probably", "maybe")
+        self.max_length = 4096
+
+        self.context = context
+        self.chatbot = chatbot.lower()
+
+        if self.chatbot == "bert":
+            self.model = BertForQuestionAnswering.from_pretrained(
+                'bert-large-uncased-whole-word-masking-finetuned-squad')
+            self.tokenizer = BertTokenizer.from_pretrained('bert-large-uncased-whole-word-masking-finetuned-squad')
+
+        elif self.chatbot == "gpt2":
+            self.model = GPT2LMHeadModel.from_pretrained("gpt2")
+            self.tokenizer = AutoTokenizer.from_pretrained("gpt2")
+
+        elif self.chatbot == "ernie":
+            self.model = AutoModel.from_pretrained("nghuyong/ernie-1.0-base-zh")
+            self.tokenizer = AutoTokenizer.from_pretrained("nghuyong/ernie-1.0-base-zh")
+
+        elif self.chatbot == "roberta":
+            self.model = RobertaForQuestionAnswering.from_pretrained("deepset/roberta-base-squad2")
+            self.tokenizer = AutoTokenizer.from_pretrained("deepset/roberta-base-squad2")
+
+        elif self.chatbot == "vqa":
+            self.model = BlipProcessor.from_pretrained("Salesforce/blip-vqa-base")
+            self.model = BlipForQuestionAnswering.from_pretrained("Salesforce/blip-vqa-base").to("cuda")
+
+        else:
+            print("invalid input")
+
+    def question_answer(self, question):
+
+        input_ids = self.tokenizer.encode(question, self.context)
+
+        tokens = self.tokenizer.convert_ids_to_tokens(input_ids)
+
+        sep_idx = input_ids.index(self.tokenizer.sep_token_id)
+
+        num_seg_a = sep_idx + 1
+
+        num_seg_b = len(input_ids) - num_seg_a
+
+        segment_ids = [0] * num_seg_a + [1] * num_seg_b
+
+        assert len(segment_ids) == len(input_ids)
+
+        output = self.model(torch.tensor([input_ids]), token_type_ids=torch.tensor([segment_ids]))
+
+        answer_start = torch.argmax(output.start_logits)
+        answer_end = torch.argmax(output.end_logits)
+
+        if answer_end >= answer_start:
+            answer = tokens[answer_start]
+            for i in range(answer_start + 1, answer_end + 1):
+                if tokens[i][0:2] == "##":
+                    answer += tokens[i][2:]
+                else:
+                    answer += " " + tokens[i]
+
+        if answer.startswith("[CLS]"):
+            answer = "Sorry! Unable to find the answer to your question. Please ask another question."
+
+        answer = "\nAnswer:\n{}".format(answer.capitalize())
+
+        return answer
+
+    def ask(self):
+
+        while True:
+            flag = True
+            question = input("\nPlease enter your question: \n")
+
+            if question.lower() in self.exit_commands:
+                print("\nBye!")
+                flag = False
+
+            if not flag:
+                break
+
+            print(self.question_answer(question))
+
+
 
 
 
