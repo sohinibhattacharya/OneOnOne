@@ -53,10 +53,10 @@ import imageio as iio
 from PIL import Image
 
 import warnings
-warnings.filterwarnings("ignore")
 
 class PretrainedModel:
     def __init__(self, model_type="resnet50", dataset="cifar10", samplingtype="none"):
+        warnings.filterwarnings("ignore")
 
         self.model_type=model_type.lower()
         self.dataset=dataset.lower()
@@ -91,12 +91,17 @@ class PretrainedModel:
                 zip_file = ZipFile(file)
                 zip_file.extractall(os.getcwd() + f'/models_to_load/')
 
+    def get_model(self):
+
         self.model=load_model(self.path)
         self.model.summary()
+
+        return self.model
 
 
 class Classification:
     def __init__(self, model_type="resnet50", batch_size=16, epochs=250, dataset="cifar10", validation_split=0.3, shuffle_bool=True, early_stopping_patience=10, lr_reducer_patience=10):
+        warnings.filterwarnings("ignore")
 
         self.model_type = model_type.lower()
         self.date=datetime.datetime.now()
@@ -423,6 +428,7 @@ class Classification:
 
 class Sampling:
     def __init__(self, samplingtype, dataset="cifar10", model_type = "resnet50", goal=99, jump=5000, validation_split=0.3, first_data_samples=10000, batch_size = 16, epochs = 250, shuffle_bool = True, early_stopping_patience = 10, lr_reducer_patience = 10):
+        warnings.filterwarnings("ignore")
 
         self.validation_split=validation_split
         self.model_type = model_type.lower()
@@ -941,6 +947,8 @@ class Sampling:
 
 class HTMLparser:
     def __init__(self, words):
+        warnings.filterwarnings("ignore")
+
         self.words = words
     def clean_html(self,raw_html):
         clean_brackets = re.compile('<.*?>')
@@ -980,6 +988,7 @@ class HTMLparser:
 
 class ContextDecider:
     def __init__(self, load=False, user_input=False, dataset="tinyimagenet", model_type="efficientnetb6", samplingtype="none", threshold=0.2, validation_split=0.3, batch_size=16, shuffle_bool=True):
+        warnings.filterwarnings("ignore")
 
         self.load=load
         self.user_input=user_input
@@ -1015,18 +1024,28 @@ class ContextDecider:
             path=input("Please input the model's path/name in the current directory (str):     ")
             self.contextmodel=load_model(os.getcwd()+path)
         else:
-            self.contextmodel = PretrainedModel(model_type=self.model_type, dataset=self.dataset,
+            # check=False
+            # for file in os.listdir(os.getcwd()):
+            #     if file.endswith(f'{self.model_type}_{self.dataset}_{self.samplingtype}.zip'):
+            #         zip_file = ZipFile(file)
+            #         zip_file.extractall(os.getcwd() + f'/models_to_load/')
+            #         self.contextmodel = load_model(os.getcwd() + f'/models_to_load/'+f'{self.model_type}_{self.dataset}_{self.samplingtype}')
+            #         check=True
+            # if not check:
+            pretrained = PretrainedModel(model_type=self.model_type, dataset=self.dataset,
                                           samplingtype=self.samplingtype)
-        # self.pretrained.model
+            self.contextmodel = pretrained.get_model()
+
         if self.user_input:
             path=input("Please enter image path in the current directory (str):    ")
             img = Image.open(os.getcwd()+f"{path}")
             img.show()
             img = iio.imread(os.getcwd()+f"{path}")
-            processed_image = preprocess_image_input(img)
-            self.pred = self.contextmodel.model.predict(processed_image)
+            processed_image = self.preprocess_image_input(img)
+            self.pred = self.contextmodel.predict(processed_image)
         else:
-            self.pred = self.contextmodel.model.predict_generator(self.val_it, random.randint(1, 3000))
+            # random.randint(1, 3000)
+            self.pred = self.contextmodel.predict_generator(self.val_it, random.randint(1, 16))
 
     def preprocess_image_input(self,input_images):
         if self.model_type=="efficientnetb6":
@@ -1075,7 +1094,6 @@ class ContextDecider:
         labels = self.val_it.class_indices
         labels2 = dict((v, k) for k, v in labels.items())
 
-        print(f"{self.pred.shape[0]}")
         for i in range(0, self.pred.shape[0]):
             classes_prob_list = []
             for j in range(0, self.output_layer_classes):
@@ -1110,14 +1128,14 @@ class ContextDecider:
     def download_dataset(self):
 
         print("Extracting...")
-        if not 'tiny-imagenet-200.zip' in os.listdir(os.getcwd()):
+        if not 'tiny-imagenet-200' in os.listdir(os.getcwd()):
             url = 'http://cs231n.stanford.edu/tiny-imagenet-200.zip'
             tiny_imgdataset = wget.download(url, out=os.getcwd())
 
-        for file in os.listdir(os.getcwd()):
-            if file.endswith("tiny-imagenet-200.zip"):
-                zip_file = ZipFile(file)
-                zip_file.extractall()
+            for file in os.listdir(os.getcwd()):
+                if file.endswith("tiny-imagenet-200.zip"):
+                    zip_file = ZipFile(file)
+                    zip_file.extractall()
 
         try:
             os.system("gdown --id 1JgRlpet7-P-x7Exweb8HC-zUcYsF5fGN")
@@ -1131,10 +1149,10 @@ class ContextDecider:
         if self.dataset == "tinyimagenet":
             train_it = self.datagen.flow_from_directory(os.getcwd() + '/tiny-imagenet-200/train',
                                                         batch_size=self.batch_size, subset="training",
-                                                        shuffle=self.shuffle_bool)
+                                                        shuffle=self.shuffle_bool,seed=random.randint(1,100))
             val_it = self.datagen.flow_from_directory(os.getcwd() + '/tiny-imagenet-200/train',
                                                       batch_size=self.batch_size,
-                                                      subset="validation", shuffle=self.shuffle_bool)
+                                                      subset="validation", shuffle=self.shuffle_bool,seed=random.randint(1,100))
             train_filenames = train_it.filenames
             val_filenames = val_it.filenames
             number_of_val_samples = len(val_filenames)
@@ -1185,6 +1203,7 @@ class ContextDecider:
 
 class QuestionAnswer:
     def __init__(self, context, chatbot="bert"):
+        warnings.filterwarnings("ignore")
 
         self.exit_commands = ("no", "n", "quit", "pause", "exit", "goodbye", "bye", "later", "stop")
         self.positive_commands = ("y", "yes", "yeah", "sure", "yup", "ya", "probably", "maybe")
