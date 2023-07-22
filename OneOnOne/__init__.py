@@ -34,7 +34,7 @@ from sklearn.utils import shuffle
 
 from transformers import pipeline
 from transformers import BlipProcessor, BlipForQuestionAnswering
-from transformers import AutoTokenizer, GPT2Model
+from transformers import GPT2Tokenizer, GPT2ForQuestionAnswering
 from transformers import AutoTokenizer, AutoModel
 from transformers import AutoTokenizer, RobertaForQuestionAnswering
 from transformers import BertForQuestionAnswering, BertTokenizer
@@ -49,6 +49,11 @@ import pkgutil
 import requests, zipfile
 from io import BytesIO
 import gdown
+import imageio as iio
+from PIL import Image
+
+import warnings
+warnings.filterwarnings("ignore")
 
 class PretrainedModel:
     def __init__(self, model_type="resnet50", dataset="cifar10", samplingtype="none"):
@@ -118,8 +123,8 @@ class Classification:
         elif self.dataset=="tinyimagenet":
             self.output_layer_classes = 200
             self.input_shape = (32, 32, 3)
-            from classes import i2d
             self.download_dataset()
+            from classes import i2d
 
         else:
             print("Invalid Input!")
@@ -292,6 +297,7 @@ class Classification:
         return callbacks
 
     def get_datagen(self):
+
         datagen = ImageDataGenerator(
             featurewise_center=False,
             samplewise_center=False,
@@ -328,22 +334,27 @@ class Classification:
                 zip_file = ZipFile(file)
                 zip_file.extractall()
 
+        try:
+            os.system("gdown --id 1JgRlpet7-P-x7Exweb8HC-zUcYsF5fGN")
+        except:
+            os.system("!gdown --id 1JgRlpet7-P-x7Exweb8HC-zUcYsF5fGN")
+
         print("Done.")
 
     def get_dataset(self):
 
         if self.dataset=="tinyimagenet":
-            train_it = self.datagen.flow_from_directory(os.getcwd()+'tiny-imagenet-200/train',
+            train_it = self.datagen.flow_from_directory(os.getcwd()+'/tiny-imagenet-200/train',
                                                         batch_size=self.batch_size, subset="training", shuffle=self.shuffle_bool)
-            val_it = self.datagen.flow_from_directory(os.getcwd()+'tiny-imagenet-200/train', batch_size=self.batch_size,
+            val_it = self.datagen.flow_from_directory(os.getcwd()+'/tiny-imagenet-200/train', batch_size=self.batch_size,
                                                       subset="validation", shuffle=self.shuffle_bool)
             train_filenames = train_it.filenames
             val_filenames = val_it.filenames
             number_of_val_samples = len(val_filenames)
             number_of_train_samples = len(train_filenames)
             # class_mode='categorical',
-            print(number_of_train_samples)
-            print(number_of_val_samples)
+            # print(number_of_train_samples)
+            # print(number_of_val_samples)
         else:
             if self.dataset == "cifar10":
                 classes = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
@@ -411,9 +422,9 @@ class Classification:
 
 
 class Sampling:
-    def __init__(self, samplingtype, dataset="cifar10", model_type = "resnet50", goal=99, jump=5000, first_data_samples=10000, batch_size = 16, epochs = 250, shuffle_bool = True, early_stopping_patience = 10, lr_reducer_patience = 10):
+    def __init__(self, samplingtype, dataset="cifar10", model_type = "resnet50", goal=99, jump=5000, validation_split=0.3, first_data_samples=10000, batch_size = 16, epochs = 250, shuffle_bool = True, early_stopping_patience = 10, lr_reducer_patience = 10):
 
-        self.validation_split=0
+        self.validation_split=validation_split
         self.model_type = model_type.lower()
         self.epochs=epochs
         self.jump = jump
@@ -430,21 +441,18 @@ class Sampling:
         self.lr_reducer_patience = lr_reducer_patience
         self.callbacks = self.get_callbacks()
         self.datagen = self.get_datagen()
-        self.train_it, self.val_it = self.get_dataset()
-
         if self.dataset == "cifar10" or self.dataset == "mnist":
             self.output_layer_classes = 10
             self.input_shape = (224, 224, 3)
-
-
         elif self.dataset == "tinyimagenet":
             self.output_layer_classes = 200
             self.input_shape = (32, 32, 3)
-            from classes import i2d
             self.download_dataset()
-
+            from classes import i2d
         else:
             print("Invalid Input!")
+
+        self.train_it, self.val_it = self.get_dataset()
 
         if samplingtype== "random":
           random_num = np.random.randint(self.first_data_samples,self.X_train.shape[0],size=self.X_train.shape[0]-self.first_data_samples)
@@ -580,11 +588,6 @@ class Sampling:
         return callbacks
 
     def get_datagen(self):
-        
-        if self.dataset=="tinyimagenet":
-            self.validation_split=input("Validation split (example - 0.3):   ")
-        else:
-            pass
             
         datagen = ImageDataGenerator(
             featurewise_center=False,
@@ -622,15 +625,21 @@ class Sampling:
                 zip_file = ZipFile(file)
                 zip_file.extractall()
 
+        try:
+            os.system("gdown --id 1JgRlpet7-P-x7Exweb8HC-zUcYsF5fGN")
+        except:
+            os.system("!gdown --id 1JgRlpet7-P-x7Exweb8HC-zUcYsF5fGN")
+
+
         print("Done.")
 
     def get_dataset(self):
 
         if self.dataset == "tinyimagenet":
-            train_it = self.datagen.flow_from_directory(os.getcwd()+'tiny-imagenet-200/train',
+            train_it = self.datagen.flow_from_directory(os.getcwd()+'/tiny-imagenet-200/train',
                                                         batch_size=self.batch_size, subset="training",
                                                         shuffle=self.shuffle_bool)
-            val_it = self.datagen.flow_from_directory(os.getcwd()+'tiny-imagenet-200/train',
+            val_it = self.datagen.flow_from_directory(os.getcwd()+'/tiny-imagenet-200/train',
                                                       batch_size=self.batch_size,
                                                       subset="validation", shuffle=self.shuffle_bool)
             train_filenames = train_it.filenames
@@ -638,8 +647,8 @@ class Sampling:
             number_of_val_samples = len(val_filenames)
             number_of_train_samples = len(train_filenames)
             # class_mode='categorical',
-            print(number_of_train_samples)
-            print(number_of_val_samples)
+            # print(number_of_train_samples)
+            # print(number_of_val_samples)
 
         else:
 
@@ -840,7 +849,6 @@ class Sampling:
 
     def get_iterations(self):
 
-
         eval_metrics=[0,0]
 
         num=0
@@ -971,11 +979,18 @@ class HTMLparser:
 
 
 class ContextDecider:
-    def __int__(self, dataset="tinyimagenet", model_type="efficientnetb6", samplingtype="none", threshold=0.2):
+    def __init__(self, load=False, user_input=False, dataset="tinyimagenet", model_type="efficientnetb6", samplingtype="none", threshold=0.2, validation_split=0.3, batch_size=16, shuffle_bool=True):
+
+        self.load=load
+        self.user_input=user_input
         self.dataset = dataset.lower()
         self.model_type = model_type.lower()
-        self.threshold = threshold
         self.samplingtype = samplingtype
+        self.threshold = threshold
+        self.validation_split=validation_split
+        self.batch_size = batch_size
+        self.shuffle_bool = shuffle_bool
+        self.datagen = self.get_datagen()
 
         if self.dataset == "cifar10" or self.dataset == "mnist":
             self.output_layer_classes = 10
@@ -988,20 +1003,67 @@ class ContextDecider:
         elif self.dataset == "tinyimagenet":
             self.output_layer_classes = 200
             self.input_shape = (32, 32, 3)
-            from classes import i2d
             self.download_dataset()
+            from classes import i2d
 
         else:
             print("Invalid Input!")
 
         self.train_it, self.val_it = self.get_dataset()
 
-        self.pretrained = PretrainedModel(model_type=self.model_type, dataset=self.dataset,
+        if self.load:
+            path=input("Please input the model's path/name in the current directory (str):     ")
+            self.contextmodel=load_model(os.getcwd()+path)
+        else:
+            self.contextmodel = PretrainedModel(model_type=self.model_type, dataset=self.dataset,
                                           samplingtype=self.samplingtype)
         # self.pretrained.model
-        self.pred = self.pretrained.model.predict_generator(self.val_it, 1)
+        if self.user_input:
+            path=input("Please enter image path in the current directory (str):    ")
+            img = Image.open(os.getcwd()+f"{path}")
+            img.show()
+            img = iio.imread(os.getcwd()+f"{path}")
+            processed_image = preprocess_image_input(img)
+            self.pred = self.contextmodel.model.predict(processed_image)
+        else:
+            self.pred = self.contextmodel.model.predict_generator(self.val_it, random.randint(1, 3000))
+
+    def preprocess_image_input(self,input_images):
+        if self.model_type=="efficientnetb6":
+            input_images = input_images.astype('float32')
+            output_ims = tf.keras.applications.efficientnet.preprocess_input(input_images)
+
+        return output_ims
+
+    def get_datagen(self):
+
+        datagen = ImageDataGenerator(
+            featurewise_center=False,
+            samplewise_center=False,
+            featurewise_std_normalization=False,
+            samplewise_std_normalization=False,
+            zca_whitening=False,
+            zca_epsilon=1e-06,
+            rotation_range=30,
+            width_shift_range=0.1,
+            height_shift_range=0.1,
+            shear_range=0.,
+            zoom_range=0.,
+            channel_shift_range=0.,
+            fill_mode='nearest',
+            cval=0.,
+            horizontal_flip=True,
+            vertical_flip=False,
+            rescale=None,
+            preprocessing_function=None,
+            data_format=None,
+            validation_split=self.validation_split)
+
+        return datagen
 
     def decide_context(self):
+
+        from classes import i2d
 
         predicted_list = []
         classes_prob_list = []
@@ -1047,7 +1109,7 @@ class ContextDecider:
 
     def download_dataset(self):
 
-        print("extracting")
+        print("Extracting...")
         if not 'tiny-imagenet-200.zip' in os.listdir(os.getcwd()):
             url = 'http://cs231n.stanford.edu/tiny-imagenet-200.zip'
             tiny_imgdataset = wget.download(url, out=os.getcwd())
@@ -1057,13 +1119,20 @@ class ContextDecider:
                 zip_file = ZipFile(file)
                 zip_file.extractall()
 
+        try:
+            os.system("gdown --id 1JgRlpet7-P-x7Exweb8HC-zUcYsF5fGN")
+        except:
+            os.system("!gdown --id 1JgRlpet7-P-x7Exweb8HC-zUcYsF5fGN")
+
+        print("Done.")
+
     def get_dataset(self):
 
         if self.dataset == "tinyimagenet":
-            train_it = self.datagen.flow_from_directory(os.getcwd() + 'tiny-imagenet-200/train',
+            train_it = self.datagen.flow_from_directory(os.getcwd() + '/tiny-imagenet-200/train',
                                                         batch_size=self.batch_size, subset="training",
                                                         shuffle=self.shuffle_bool)
-            val_it = self.datagen.flow_from_directory(os.getcwd() + 'tiny-imagenet-200/train',
+            val_it = self.datagen.flow_from_directory(os.getcwd() + '/tiny-imagenet-200/train',
                                                       batch_size=self.batch_size,
                                                       subset="validation", shuffle=self.shuffle_bool)
             train_filenames = train_it.filenames
@@ -1071,8 +1140,8 @@ class ContextDecider:
             number_of_val_samples = len(val_filenames)
             number_of_train_samples = len(train_filenames)
             # class_mode='categorical',
-            print(number_of_train_samples)
-            print(number_of_val_samples)
+            # print(number_of_train_samples)
+            # print(number_of_val_samples)
         else:
             if self.dataset == "cifar10":
                 classes = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
@@ -1119,9 +1188,8 @@ class QuestionAnswer:
 
         self.exit_commands = ("no", "n", "quit", "pause", "exit", "goodbye", "bye", "later", "stop")
         self.positive_commands = ("y", "yes", "yeah", "sure", "yup", "ya", "probably", "maybe")
-        self.max_length = 4096
-
         self.context = context
+        self.max_length = len(self.context)
         self.chatbot = chatbot.lower()
 
         if self.chatbot == "bert":
@@ -1129,59 +1197,80 @@ class QuestionAnswer:
             self.tokenizer = BertTokenizer.from_pretrained('bert-large-uncased-whole-word-masking-finetuned-squad')
 
         elif self.chatbot == "gpt2":
-            self.model = GPT2Model.from_pretrained("gpt2")
-            self.tokenizer = AutoTokenizer.from_pretrained("gpt2")
-
-        elif self.chatbot == "ernie":
-            self.model = ErnieModel.from_pretrained("nghuyong/ernie-1.0-base-zh")
-            self.tokenizer = AutoTokenizer.from_pretrained("nghuyong/ernie-1.0-base-zh")
+            self.model = GPT2ForQuestionAnswering.from_pretrained("gpt2")
+            self.tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
 
         elif self.chatbot == "roberta":
             self.model = RobertaForQuestionAnswering.from_pretrained("deepset/roberta-base-squad2")
             self.tokenizer = AutoTokenizer.from_pretrained("deepset/roberta-base-squad2")
 
-        elif self.chatbot == "vqa":
-            self.model = BlipProcessor.from_pretrained("Salesforce/blip-vqa-base")
-            self.model = BlipForQuestionAnswering.from_pretrained("Salesforce/blip-vqa-base").to("cuda")
+        # elif self.chatbot == "ernie":
+        #     self.model = ErnieModel.from_pretrained("nghuyong/ernie-1.0-base-zh")
+        #     self.tokenizer = AutoTokenizer.from_pretrained("nghuyong/ernie-1.0-base-zh")
+
+        # elif self.chatbot == "vqa":
+        #     self.model = BlipForQuestionAnswering.from_pretrained("Salesforce/blip-vqa-base").to("cuda")
+        #     self.tokenizer = BlipProcessor.from_pretrained("Salesforce/blip-vqa-base")
 
         else:
             print("invalid input")
 
     def question_answer(self, question):
 
-        # input_ids = self.tokenizer.encode(question, self.context)
+        if self.chatbot=="bert":
+            c = self.context[:512]
 
-        # tokens = self.tokenizer.convert_ids_to_tokens(input_ids)
+            input_ids = self.tokenizer.encode(question, c, add_special_tokens=True, truncation=True, max_length=len(context))
 
-        tokens = token.tokenize(text, max_length=MAX_TOKENS, truncation=True)
+            tokens = self.tokenizer.convert_ids_to_tokens(input_ids)
 
-        sep_idx = input_ids.index(self.tokenizer.sep_token_id)
+            # tokens = self.tokenizer.tokenize(self.context, max_length=self.max_length, truncation=True)
 
-        num_seg_a = sep_idx + 1
+            sep_idx = input_ids.index(self.tokenizer.sep_token_id)
 
-        num_seg_b = len(input_ids) - num_seg_a
+            num_seg_a = sep_idx + 1
 
-        segment_ids = [0] * num_seg_a + [1] * num_seg_b
+            num_seg_b = len(input_ids) - num_seg_a
 
-        assert len(segment_ids) == len(input_ids)
+            segment_ids = [0] * num_seg_a + [1] * num_seg_b
 
-        output = self.model(torch.tensor([input_ids]), token_type_ids=torch.tensor([segment_ids]))
+            assert len(segment_ids) == len(input_ids)
 
-        answer_start = torch.argmax(output.start_logits)
-        answer_end = torch.argmax(output.end_logits)
+            output = self.model(torch.tensor([input_ids]), token_type_ids=torch.tensor([segment_ids]))
 
-        if answer_end >= answer_start:
-            answer = tokens[answer_start]
-            for i in range(answer_start + 1, answer_end + 1):
-                if tokens[i][0:2] == "##":
-                    answer += tokens[i][2:]
-                else:
-                    answer += " " + tokens[i]
+            answer_start = torch.argmax(output.start_logits)
+            answer_end = torch.argmax(output.end_logits)
 
-        if answer.startswith("[CLS]"):
-            answer = "Sorry! Unable to find the answer to your question. Please ask another question."
+            if answer_end >= answer_start:
+                answer = tokens[answer_start]
+                for i in range(answer_start + 1, answer_end + 1):
+                    if tokens[i][0:2] == "##":
+                        answer += tokens[i][2:]
+                    else:
+                        answer += " " + tokens[i]
 
-        answer = "\nAnswer:\n{}".format(answer.capitalize())
+            if answer.startswith("[CLS]") or answer=="":
+                answer = "Sorry! Unable to find the answer to your question. Please ask another question."
+
+            answer = f"\nAnswer:\n{format(answer.capitalize())}"
+
+        elif self.chatbot=="gpt2" or self.chatbot=="roberta":
+            inputs = self.tokenizer(question, self.context, return_tensors="pt", truncation='longest_first', )
+
+            input_ids = self.tokenizer.encode(question, self.context, max_length=self.max_length)
+
+            with torch.no_grad():
+                outputs = self.model(**inputs)
+
+            answer_start_index = outputs.start_logits.argmax()
+            answer_end_index = outputs.end_logits.argmax()
+            predict_answer_tokens = inputs.input_ids[0, answer_start_index: answer_end_index + 1]
+            output_ids = self.tokenizer.decode(predict_answer_tokens)
+
+            if output_ids == "" or output_ids.startswith("[CLS]") or output_ids== "<s>":
+                output_ids = "Sorry! Unable to find the answer to your question. Please ask another question."
+
+            answer = f"\nAnswer:\n {format(output_ids.capitalize())}"
 
         return answer
 

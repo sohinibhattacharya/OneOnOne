@@ -85,7 +85,7 @@ from OneOnOne import QuestionAnswer
 parser=HTMLparser(list_of_context_words)
 text=parser.get_context_text()
 
-qa=QuestionAnswer(text,"bert")
+qa=QuestionAnswer(text,"roberta")
 qa.ask()
 ```
 

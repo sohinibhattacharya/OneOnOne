@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: OneOnOne
-Version: 0.6911
+Version: 0.6929
 Summary: A package for pre-trained image classification and context-decider for question-answering chatbots.
 Author: Sohini Bhattacharya
 Author-email: mail.sohinibhattacharya@gmail.com

@@ -1,9 +1,15 @@
 class ContextDecider:
-    def __int__(self, dataset="tinyimagenet", model_type="efficientnetb6", samplingtype="none", threshold=0.2):
+    def __int__(self, model_type="efficientnetb6", dataset="tinyimagenet", samplingtype="none", threshold=0.2):
         self.dataset = dataset.lower()
         self.model_type = model_type.lower()
         self.threshold = threshold
         self.samplingtype=samplingtype
+        self.train_it, self.val_it = self.get_dataset()
+
+        self.pretrained = PretrainedModel(model_type=self.model_type, dataset=self.dataset,
+                                          samplingtype=self.samplingtype)
+        # self.pretrained.model
+        self.pred = self.pretrained.model.predict_generator(self.val_it, 1)
 
         if self.dataset == "cifar10" or self.dataset == "mnist":
             self.output_layer_classes = 10
@@ -21,13 +27,6 @@ class ContextDecider:
 
         else:
             print("Invalid Input!")
-
-        self.train_it, self.val_it = self.get_dataset()
-
-        self.pretrained=PretrainedModel(model_type=self.model_type, dataset=self.dataset, samplingtype=self.samplingtype)
-        # self.pretrained.model
-        self.pred = self.pretrained.model.predict_generator(self.val_it, 1)
-
 
 
     def decide_context(self):

@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-VERSION=0.6911
+VERSION=0.6929
 
 
 DESCRIPTION="A package for pre-trained image classification and context-decider for question-answering chatbots."

@@ -12,7 +12,8 @@ def print_hi(name):
     # print(path.dirname(__file__))
     # c=Sampling("random")
     # c.initial_training()
-    c=PretrainedModel()
+    # c=ContextDecider()
+    # c.decide_context()
     # c.model.summary()
 
     # print(f'Hi, hi')  # Press ⌘F8 to toggle the breakpoint.
