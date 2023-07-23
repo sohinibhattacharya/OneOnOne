@@ -49,8 +49,9 @@ import pkgutil
 import requests, zipfile
 from io import BytesIO
 import gdown
-import imageio as iio
+
 from PIL import Image
+from tensorflow.keras.preprocessing.image import load_img, img_to_array
 
 import warnings
 
@@ -1038,21 +1039,20 @@ class ContextDecider:
 
         if self.user_input:
             path=input("Please enter image path in the current directory (str):    ")
-            img = Image.open(os.getcwd()+f"{path}")
+            img = Image.open(os.getcwd() + f"{path}")
             img.show()
-            img = iio.imread(os.getcwd()+f"{path}")
-            processed_image = self.preprocess_image_input(img)
-            self.pred = self.contextmodel.predict(processed_image)
+
+            img = load_img(os.getcwd() + f"{path}")
+            img = img.resize((32, 32))
+            img = img_to_array(img)
+
+            img = img.reshape(1, 32, 32, 3)
+            # img = iio.imread(os.getcwd()+f"{path}")
+            self.pred = self.contextmodel.predict_generator(img, steps = self.batch_size)
         else:
             # random.randint(1, 3000)
-            self.pred = self.contextmodel.predict_generator(self.val_it, random.randint(1, 16))
-
-    def preprocess_image_input(self,input_images):
-        if self.model_type=="efficientnetb6":
-            input_images = input_images.astype('float32')
-            output_ims = tf.keras.applications.efficientnet.preprocess_input(input_images)
-
-        return output_ims
+            # np.ceil(self.number_of_val_samples / self.batch_size)
+            self.pred = self.contextmodel.predict_generator(self.val_it, steps = self.batch_size)
 
     def get_datagen(self):
 
@@ -1155,7 +1155,7 @@ class ContextDecider:
                                                       subset="validation", shuffle=self.shuffle_bool,seed=random.randint(1,100))
             train_filenames = train_it.filenames
             val_filenames = val_it.filenames
-            number_of_val_samples = len(val_filenames)
+            self.number_of_val_samples = len(val_filenames)
             number_of_train_samples = len(train_filenames)
             # class_mode='categorical',
             # print(number_of_train_samples)

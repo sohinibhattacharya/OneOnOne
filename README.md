@@ -65,15 +65,16 @@ model=pretrained.get_model()
 <h4>More Examples on NLP use-cases:</h4>
 
 <dl>
-  <dt><span style="color:#FFC0CB">If you want your predicted class(es) of the input image to be used as the context for your chatbot, simply run, </span>
+  <dt><span style="color:#FFC0CB">If you want your predicted class(es) of the input image to be used as the context for your chatbot, simply run, and input the image path, </span>
 </dl>
 
 ```python
 from OneOnOne import ContextDecider
 
-decider=ContextDecider(dataset="tinyimagenet", model_type="efficientnetb6", samplingtype="none", threshold=0.4)
+decider=ContextDecider(user_input=True)
 list_of_context_words=decider.decide_context()
 ```
+or, just let it choose a random image for you! And ask questions.
 
 <dl>
   <dt><span style="color:#FFC0CB">If you want your predicted class(es) of the input image to be used as the context for your chatbot, simply run, </span>
