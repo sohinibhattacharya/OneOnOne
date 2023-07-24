@@ -1,4 +1,6 @@
 wget
+bayesian-optimization
+copy
 torch
 transformers
 gdown

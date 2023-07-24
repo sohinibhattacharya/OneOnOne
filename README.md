@@ -44,8 +44,9 @@ classifier=Classification(validation_split=0.4,early_stopping_patience=20)
 ```python
 from OneOnOne import Sampling
 
-sampling=Sampling("entropy")
+sampling=Sampling("mixedbayes","cifar10",first_data_samples=5000)
 sampling.initial_training()
+history_data=sampling.get_iterations()
 ```
 
 <dl>

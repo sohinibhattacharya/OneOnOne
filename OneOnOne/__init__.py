@@ -55,6 +55,10 @@ from tensorflow.keras.preprocessing.image import load_img, img_to_array
 
 import warnings
 
+import copy
+from bayes_opt import BayesianOptimization
+tf.config.run_functions_eagerly(True)
+
 class PretrainedModel:
     def __init__(self, model_type="resnet50", dataset="cifar10", samplingtype="none"):
         warnings.filterwarnings("ignore")
@@ -723,29 +727,34 @@ class Sampling:
         e=[0,0]
 
         k=0
+        self.accuracy_data=[]
+        history_data=[]
 
-        num=0
-
-        y=[]
-        x=[]
+        self.y=[]
+        self.x=[]
         for i in range(0,self.first_data_samples):
-          y.append(self.y_train[i])
-          x.append(self.X_train[i])
+          self.y.append(self.y_train[i])
+          self.x.append(self.X_train[i])
 
         while (e[1] < self.goal / 100)&(k + self.jump < self.X_train.shape[0]):
 
             for i in range(0+k,self.jump+k):
-                x.append(self.X_train[self.random_num[i]])
-                y.append(self.y_train[self.random_num[i]])
+                self.x.append(self.X_train[self.random_num[i]])
+                self.y.append(self.y_train[self.random_num[i]])
 
             k=k+self.jump
-            num=num+1
 
-            self.model.fit(np.array(x), np.array(y), epochs=50)
+            h=self.model.fit(self.datagen.flow(np.array(self.x), np.array(self.y), batch_size=self.batch_size), validation_data=self.val_it,
+                                     epochs=self.epochs, verbose=1, workers=4,
+                                     callbacks=self.callbacks)
 
-            e = self.model.evaluate(self.X_test, self.y_test)
+            history_data.append(h)
 
-        return e[1],num
+            eval_metrics = self.model.evaluate(self.X_test, self.y_test)
+            print(eval_metrics)
+            self.accuracy_data.append(eval_metrics)
+
+        return history_data
 
 
     def get_entropy(self,y_predicted_en):
@@ -843,7 +852,7 @@ class Sampling:
             self.model = self.define_compile_model()
             self.model.summary()
 
-            history = self.model.fit(self.datagen.flow(self.X_train, self.y_train, batch_size=self.batch_size), validation_data=(self.X_test, self.y_test),
+            history = self.model.fit(self.datagen.flow(self.X_train[:self.first_data_samples], self.y_train[:self.first_data_samples], batch_size=self.batch_size), validation_data=(self.X_test, self.y_test),
                                      epochs=self.epochs, verbose=1, workers=4,
                                      callbacks=self.callbacks)
             self.model.save(os.getcwd() + f"/trained_models/{self.model_type}_{self.dataset}_{self.samplingtype}_{self.first_data_samples}_{self.date}_initial_training")
@@ -852,37 +861,84 @@ class Sampling:
                 pickle.dump(history.history, file_pi)
             print("saved.")
 
+    def bayesian(self, lc_coeff):
 
+        x_temp = copy.deepcopy(self.x)
+        y_temp = copy.deepcopy(self.y)
+
+        lr_scheduler = LearningRateScheduler(self.lr_schedule)
+        lr_reducer = ReduceLROnPlateau(factor=np.sqrt(0.1),
+                                       cooldown=0,
+                                       patience=self.lr_reducer_patience,
+                                       min_lr=0.5e-6)
+
+        params = {'lc_coeff': lc_coeff}
+        hc_coeff = 1 - lc_coeff
+
+        temp_model = load_model(os.getcwd() + "/mixedbayesmodel.h5")
+
+        y_predicted = temp_model.predict(self.X_train_copy)
+
+        values_lc = self.get_lc(y_predicted)
+        values_hc = self.get_hc(y_predicted)
+
+        print(f"lc: {lc_coeff}, hc: {hc_coeff}")
+
+        lc_jump = int(self.jump * lc_coeff)
+        hc_jump = self.jump - lc_jump
+
+        for i in range(0, lc_jump):
+            x_temp.append(self.X_train_copy[values_lc[i][0]])
+            y_temp.append(self.y_train_copy[values_lc[i][0]])
+
+        for i in range(0, hc_jump):
+            x_temp.append(self.X_train_copy[values_hc[i][0]])
+            y_temp.append(self.y_train_copy[values_hc[i][0]])
+
+        h = temp_model.fit(datagen.flow(np.array(x_temp), np.array(y_temp), batch_size=self.batch_size),
+                           validation_data=(self.X_test, self.y_test), epochs=10, callbacks=[lr_scheduler,lr_reducer], verbose=1,
+                           workers=4)
+
+        score = temp_model.evaluate(self.X_test, self.y_test)
+
+        return 100 * float(score[1])
+
+    def get_bayes_coeff(self):
+
+        params = {'lc_coeff': (0, 1)}
+        bo = BayesianOptimization(self.bayesian, params, random_state=22)
+        bo.maximize(init_points=20, n_iter=10)
+
+        params = bo.max['params']
+        lc_coeff = params["lc_coeff"]
+
+        return lc_coeff
 
     def get_iterations(self):
 
         eval_metrics=[0,0]
 
         num=0
-        batch_size_data = [0]
-        acuracy_data = [0]
-        epoch_data = []
+        self.accuracy_data=[]
         history_data = []
 
-        y = []
-        x = []
+        self.y = []
+        self.x = []
 
         if self.samplingtype== "random":
-          eval_metrics[1],num = self.get_iterations_rs()
+          return self.get_iterations_rs()
 
-          return eval_metrics[1],num
-
-        X_train_copy=self.X_train[self.first_data_samples:self.X_train.shape[0]]
-        y_train_copy=self.y_train[self.first_data_samples:self.X_train.shape[0]]     
+        self.X_train_copy=copy.deepcopy(self.X_train[self.first_data_samples:self.X_train.shape[0]])
+        self.y_train_copy=copy.deepcopy(self.y_train[self.first_data_samples:self.X_train.shape[0]])
 
         for i in range(0,self.first_data_samples):
-          y.append(self.y_train[i])
-          x.append(self.X_train[i])
+          self.y.append(self.y_train[i])
+          self.x.append(self.X_train[i])
 
         while (eval_metrics[1] < self.goal / 100)&(self.jump <= X_train_copy.shape[0]):
 
-            total_index=[*range(0, X_train_copy.shape[0], 1)]
-            y_predicted = self.model.predict(X_train_copy)
+            total_index=[*range(0, self.X_train_copy.shape[0], 1)]
+            y_predicted = self.model.predict(self.X_train_copy)
 
             if self.samplingtype== "margin":
               values = self.get_margin(y_predicted)
@@ -894,7 +950,7 @@ class Sampling:
               values = self.get_entropy(y_predicted)
             elif self.samplingtype== "ratio":
               values = self.get_ratio(y_predicted)
-            elif self.samplingtype== "mixed":
+            elif self.samplingtype== "mixed" or self.samplingtype== "mixedbayes":
               values_lc = self.get_lc(y_predicted)
               values_hc = self.get_hc(y_predicted)
             else:
@@ -905,46 +961,61 @@ class Sampling:
             if self.samplingtype== "mixed":
               for i in range(0, self.jump // 2):
                 index.append(values_lc[i][0])
-                x.append(X_train_copy[values_lc[i][0]])
-                y.append(y_train_copy[values_lc[i][0]])
+                self.x.append(self.X_train_copy[values_lc[i][0]])
+                self.y.append(self.y_train_copy[values_lc[i][0]])
 
               for i in range(0, self.jump // 2):
                 index.append(values_hc[i][0])
-                x.append(X_train_copy[values_hc[i][0]])
-                y.append(y_train_copy[values_hc[i][0]])
+                self.x.append(self.X_train_copy[values_hc[i][0]])
+                self.y.append(self.y_train_copy[values_hc[i][0]])
 
+            elif self.samplingtype== "mixedbayes":
+              self.model.save(os.getcwd() + "/mixedbayesmodel.h5")
+
+              lc_coeff = self.get_bayes_coeff()
+
+              lc_jump = int((self.jump) * lc_coeff)
+              hc_jump = self.jump - lc_jump
+
+              for i in range(0, lc_jump):
+                index.append(values_lc[i][0])
+                self.x.append(self.X_train_copy[values_lc[i][0]])
+                self.y.append(self.y_train_copy[values_lc[i][0]])
+
+              for i in range(0, hc_jump):
+                index.append(values_hc[i][0])
+                self.x.append(self.X_train_copy[values_hc[i][0]])
+                self.y.append(self.y_train_copy[values_hc[i][0]])
 
             else:
               for i in range(0,self.jump):
                 index.append(values[i][0])
-                x.append(X_train_copy[values[i][0]])
-                y.append(y_train_copy[values[i][0]])
+                self.x.append(self.X_train_copy[values[i][0]])
+                self.y.append(self.y_train_copy[values[i][0]])
 
             num+=1
 
-            h=self.model.fit(self.datagen.flow(np.array(x), np.array(y), batch_size=self.batch_size), validation_data=self.val_it,
+            h=self.model.fit(self.datagen.flow(np.array(self.x), np.array(self.y), batch_size=self.batch_size), validation_data=self.val_it,
                                      epochs=self.epochs, verbose=1, workers=4,
                                      callbacks=self.callbacks)
 
-            batch_size_data.append(np.array(x).shape[0])
-            epoch_data.append(num)
             history_data.append(h)
 
             eval_metrics = self.model.evaluate(self.X_test, self.y_test)
             print(eval_metrics)
-            acuracy_data.append(100*float(eval_metrics[1]))
+            self.accuracy_data.append(eval_metrics)
 
             a=[]
             for element in total_index:
               if element not in index:
                 a.append(element)
 
-            X_train_copy=X_train_copy[a]
-            y_train_copy=y_train_copy[a]
+            self.X_train_copy=self.X_train_copy[a]
+            self.y_train_copy=self.y_train_copy[a]
 
         self.model.save(os.getcwd() + f"/trained_models/{self.model_type}_{self.dataset}_{self.samplingtype}_{self.date}_completed")
 
-        return history_data,epoch_data,batch_size_data,acuracy_data
+        return history_data
 
 class HTMLparser:
     def __init__(self, words):
