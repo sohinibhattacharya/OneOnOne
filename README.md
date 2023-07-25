@@ -49,6 +49,8 @@ sampling.initial_training()
 history_data=sampling.get_iterations()
 ```
 
+This will use the bayes optimization method to find the optimal coefficient for highest confidence and least confidence samples.
+
 <dl>
   <dt><span style="color:#FFC0CB">or, download pretrained models with your desired specifications!</span>
 </dl>
