@@ -67,7 +67,7 @@ class PretrainedModel:
         self.dataset=dataset.lower()
         self.samplingtype=samplingtype.lower()
 
-        self.map={"resnet50_cifar10_none":"1YVG0lAnpBfM_MB7ctV1vHcslb6O-3Vbm","resnet50_cifar10_leastconfidence":"1fSJYo5VOppTkgWb-Fu2Sf_JL4s9JUmoK","resnet50_cifar10_mixed":"","resnet50_cifar10_margin":"","efficientnetb6_cifar10_none":"16Wqfx7mcEhssZksF1yUAUEG6mkhMSeme","efficientnetb6_tinyimagenet_none":"1pGX8zB99ugqcvPohxykPC1JLM0Ld0L-D"}
+        self.map={"resnet50_cifar10_none":"1YVG0lAnpBfM_MB7ctV1vHcslb6O-3Vbm","resnet50_cifar10_leastconfidence":"1fSJYo5VOppTkgWb-Fu2Sf_JL4s9JUmoK","resnet50_cifar10_none_initial_10k":"1NOicX1WgVzgRPWwWM_LzPyNvnu5st5Kd","resnet50_cifar10_mixedbayes":"","resnet50_cifar10_margin":"","efficientnetb6_cifar10_none":"16Wqfx7mcEhssZksF1yUAUEG6mkhMSeme","efficientnetb6_tinyimagenet_none":"1pGX8zB99ugqcvPohxykPC1JLM0Ld0L-D"}
 
         if self.dataset=="tinyimagenet":
             self.model_type="efficientnetb6"
@@ -935,7 +935,7 @@ class Sampling:
           self.y.append(self.y_train[i])
           self.x.append(self.X_train[i])
 
-        while (eval_metrics[1] < self.goal / 100)&(self.jump <= X_train_copy.shape[0]):
+        while (eval_metrics[1] < self.goal / 100)&(self.jump <= self.X_train_copy.shape[0]):
 
             total_index=[*range(0, self.X_train_copy.shape[0], 1)]
             y_predicted = self.model.predict(self.X_train_copy)
