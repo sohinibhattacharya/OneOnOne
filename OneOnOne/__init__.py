@@ -39,6 +39,8 @@ from transformers import AutoTokenizer, AutoModel
 from transformers import AutoTokenizer, RobertaForQuestionAnswering
 from transformers import BertForQuestionAnswering, BertTokenizer
 from transformers import AutoTokenizer, ErnieModel
+from transformers import pipeline, Conversation
+
 import torch
 from torchvision import transforms
 
@@ -58,6 +60,12 @@ import warnings
 import copy
 from bayes_opt import BayesianOptimization
 tf.config.run_functions_eagerly(True)
+
+from pydub import AudioSegment
+import speech_recognition as sr
+import pyttsx3
+import pytesseract
+from googletrans import Translator
 
 class PretrainedModel:
     def __init__(self, model_type="resnet50", dataset="cifar10", samplingtype="none"):
@@ -896,7 +904,7 @@ class Sampling:
             y_temp.append(self.y_train_copy[values_hc[i][0]])
 
         h = temp_model.fit(datagen.flow(np.array(x_temp), np.array(y_temp), batch_size=self.batch_size),
-                           validation_data=(self.X_test, self.y_test), epochs=10, callbacks=[lr_scheduler,lr_reducer], verbose=1,
+                           validation_data=(self.X_test, self.y_test), epochs=50, callbacks=[lr_scheduler,lr_reducer], verbose=1,
                            workers=4)
 
         score = temp_model.evaluate(self.X_test, self.y_test)
@@ -1378,6 +1386,292 @@ class QuestionAnswer:
                 break
 
             print(self.question_answer(question))
+
+class TextTranslator:
+    def __init__(self, file_bool=False,filepath=""):
+        self.file_bool=file_bool
+        self.filepath=filepath
+
+        if self.file_bool:
+            file = open(os.getcwd()+f"{self.filepath}","r")
+            print(file.readlines())
+        else:
+            text
+
+
+class ImageTranslator:
+    def __init__(self, imgpath=imgpath, translate_from_language="english", translate_to_language="english", speak=False):
+        self.translate_from_language=translate_from_language
+        self.translate_to_language=translate_to_language
+        self.imgpath=imgpath
+        self.speak=self.speak
+        self.date = datetime.datetime.now()
+
+    def speak(self, command):
+
+        engine = pyttsx3.init()
+        engine.say(command)
+        engine.runAndWait()
+
+        if speak:
+            try:
+                os.system("sudo apt install espeak")
+                os.system("sudo apt install libespeak-dev")
+            except:
+                os.system("!sudo apt install espeak")
+                os.system("!sudo apt install libespeak-dev")
+
+
+        try:
+            os.system("sudo apt install tesseract-ocr")
+            os.system("apt install libtesseract-dev")
+        except:
+            os.system("!sudo apt install tesseract-ocr")
+            os.system("!apt install libtesseract-dev")
+
+        img = Image.open(os.getcwd()+self.imgpath)
+
+        result = pytesseract.image_to_string(img,lang=self.translate_from_language)
+        with open(f'{self.imgpath}_text_{self.translate_from_language}.txt', mode='w') as file:
+            file.write(result)
+            print(result)
+
+        translator = Translator()
+
+        k = translator.translate(result.replace("\n"," ")[:-5], dest=self.translate_to_language)
+        print(k)
+
+        if speak:
+            self.speak(k)
+
+
+class Conversation:
+    def __init__(self):
+        warnings.filterwarnings("ignore")
+
+        self.conversational_pipeline = pipeline("conversational")
+
+        try:
+            os.system("apt install libasound2-dev portaudio19-dev libportaudio2 libportaudiocpp0 ffmpeg")
+        except:
+            os.system("!apt install libasound2-dev portaudio19-dev libportaudio2 libportaudiocpp0 ffmpeg")
+
+        self.recognizer = sr.Recognizer()
+
+    def speak(self,command):
+
+        engine = pyttsx3.init()
+        engine.say(command)
+        engine.runAndWait()
+
+    def answer(self,question):
+        output = self.conversational_pipeline([question])
+        out_list = str(output).split("\n")
+        temp = out_list[2].split(">>")
+        output = temp[1].replace("\n", "")
+        return output
+
+    def converse(self):
+
+        while True:
+
+            try:
+
+                with sr.Microphone() as source2:
+
+                    r.adjust_for_ambient_noise(source2,duration=5)
+                    print("Listening...")
+
+                    audio2 = r.listen(source2,timeout=5,phrase_time_limit=5)
+
+                    print("Recognizing...")
+
+                    question = self.recognizer.recognize_google(audio2,language = 'en-IN')
+                    question = question.lower()
+
+                    print("Did you say " + question)
+                    self.speak(question)
+
+                    answer_output=self.answer(question)
+                    self.speak(answer_output)
+
+            except sr.RequestError as e:
+                print("Could not request results; {0}".format(e))
+
+            except sr.UnknownValueError:
+                print("unknown error occured")
+
+
+
+
+class Clustering:
+    def __init__(self, data, score_type="silhouette", pca_plot=False, type="kmeans"):
+
+        self.data = data.dropna(axis=1)
+
+        self.pca_plot = pca_plot
+        self.type = type
+        self.score_type = score_type
+        self.n_components = self.get_n_components()
+
+        print(f"no. of components: {self.n_components}")
+        self.preprocessor = Pipeline([("scaler", MinMaxScaler()), ("pca", PCA())])
+        self.preprocessor.fit(self.data)
+        self.preprocessed_data = self.preprocessor.transform(self.data)
+
+        if self.type == "kmeans":
+            self.kmeans_kwargs = {"init": "random", "n_init": 50, "max_iter": 500, "random_state": 22, }
+            self.n_clusters = self.get_n_clusters()
+            self.kmeans = KMeans(n_clusters=self.n_clusters, **self.kmeans_kwargs)
+            self.kmeans.fit(self.preprocessed_data)
+            self.labels = self.kmeans.labels_
+
+        elif self.type == "spectral":
+            self.spectral_kwargs = {"n_init": 50, "random_state": 22, "affinity": 'nearest_neighbors', }
+            # 'eigen_solver':"arpack",
+            self.n_clusters = self.get_n_clusters()
+            self.spectral = SpectralClustering(n_clusters=self.n_clusters, **self.spectral_kwargs)
+            self.spectral.fit(self.preprocessed_data)
+            self.labels = self.spectral.labels_
+
+        elif self.type == "heirarchical":
+            self.heirarchical_kwargs = {"metric": 'euclidean', "linkage": 'ward'}
+            self.n_clusters = self.get_n_clusters()
+            self.heirarchical = AgglomerativeClustering(n_clusters=self.n_clusters, **self.heirarchical_kwargs)
+            self.heirarchical.fit(self.preprocessed_data)
+            self.labels = self.heirarchical.labels_
+
+        print(f"no. of clusters: {self.n_clusters}")
+
+    def plot_groups(self):
+        fte_colors = {
+            -1: "#003428",
+            0: "#008fd5",
+            1: "#fc4f30",
+            2: "#000000",
+            3: "#ffffff",
+            4: "#389241",
+            5: "#434822"}
+
+        if self.type == "kmeans":
+            a = self.kmeans.fit_predict(self.preprocessed_data)
+            fig, ax = plt.subplots()
+            sns.scatterplot(x=self.preprocessed_data[:, 0], y=self.preprocessed_data[:, 1], hue=a, ax=ax)
+            kmeans_silhouette = silhouette_score(self.preprocessed_data, self.kmeans.labels_).round(2)
+            ax.set(title=f"{self.type} Clustering:    Silhouette: {kmeans_silhouette}")
+
+        elif self.type == "spectral":
+            a = self.spectral.fit_predict(self.preprocessed_data)
+            fig, ax = plt.subplots()
+            sns.scatterplot(x=self.preprocessed_data[:, 0], y=self.preprocessed_data[:, 1], hue=a, ax=ax)
+            spectral_silhouette = silhouette_score(self.preprocessed_data, self.spectral.labels_).round(2)
+            ax.set(title=f"{self.type} Clustering:    Silhouette: {spectral_silhouette}")
+
+        elif self.type == "heirarchical":
+            a = self.heirarchical.fit_predict(self.preprocessed_data)
+            fig, ax = plt.subplots()
+            sns.scatterplot(x=self.preprocessed_data[:, 0], y=self.preprocessed_data[:, 1], hue=a, ax=ax)
+            heirarchical_silhouette = silhouette_score(self.preprocessed_data, self.heirarchical.labels_).round(2)
+            ax.set(title=f"{self.type} Clustering:    Silhouette: {heirarchical_silhouette}")
+
+        else:
+            print("Invalid Input!")
+
+    def get_n_components(self):
+        pca = PCA(random_state=22)
+
+        x_pca = pca.fit_transform(self.data)
+
+        exp_var_pca = pca.explained_variance_ratio_
+
+        cum_sum_eigenvalues = np.cumsum(exp_var_pca)
+
+        n = -1
+
+        for i in range(len(cum_sum_eigenvalues)):
+            if cum_sum_eigenvalues[i] > 0.90:
+                n = i
+                break
+
+        if n == -1:
+            for i in range(len(cum_sum_eigenvalues)):
+                if cum_sum_eigenvalues[i] > 0.85:
+                    n = i
+                    break
+
+        if self.pca_plot:
+            plt.bar(range(0, len(exp_var_pca)), exp_var_pca, alpha=0.5, align='center',
+                    label='Individual explained variance')
+            plt.step(range(0, len(cum_sum_eigenvalues)), cum_sum_eigenvalues, where='mid',
+                     label='Cumulative explained variance')
+            plt.ylabel('Explained variance ratio')
+            plt.xlabel('Principal component index')
+            plt.legend(loc='best')
+            plt.tight_layout()
+            plt.show()
+
+        return n
+
+    def get_n_clusters(self):
+
+        coeff = []
+
+        if self.score_type == "silhouette":
+            if self.type == "kmeans":
+                for k in range(2, 11):
+                    kmeans = KMeans(n_clusters=k, **self.kmeans_kwargs)
+                    kmeans.fit(self.preprocessed_data)
+                    score = silhouette_score(self.preprocessed_data, kmeans.labels_)
+                    coeff.append(score)
+            elif self.type == "spectral":
+                for k in range(2, 11):
+                    spectral = SpectralClustering(n_clusters=k, **self.spectral_kwargs)
+                    spectral.fit(self.preprocessed_data)
+                    score = silhouette_score(self.preprocessed_data, spectral.labels_)
+                    coeff.append(score)
+            elif self.type == "heirarchical":
+                for k in range(2, 11):
+                    heirarchical = AgglomerativeClustering(n_clusters=k, **self.heirarchical_kwargs)
+                    heirarchical.fit(self.preprocessed_data)
+                    score = silhouette_score(self.preprocessed_data, heirarchical.labels_)
+                    coeff.append(score)
+
+            plt.style.use("fivethirtyeight")
+            plt.plot(range(2, 11), coeff)
+            plt.xticks(range(2, 11))
+            plt.xlabel("Number of Clusters")
+            plt.ylabel("Silhouette Coefficient")
+            plt.show()
+
+        elif self.score_type == "sse":
+            if self.type == "kmeans":
+                for k in range(2, 11):
+                    kmeans = KMeans(n_clusters=k, **self.kmeans_kwargs)
+                    kmeans.fit(self.preprocessed_data)
+                    coeff.append(kmeans.inertia_)
+            elif self.type == "spectral":
+                for k in range(2, 11):
+                    spectral = SpectralClustering(n_clusters=k, **self.spectral_kwargs)
+                    spectral.fit(self.preprocessed_data)
+                    coeff.append(spectral.inertia_)
+            elif self.type == "heirarchical":
+                for k in range(2, 11):
+                    heirarchical = AgglomerativeClustering(n_clusters=k, **self.heirarchical_kwargs)
+                    heirarchical.fit(self.preprocessed_data)
+                    coeff.append(heirarchical.inertia_)
+
+            plt.style.use("fivethirtyeight")
+            plt.plot(range(2, 11), coeff)
+            plt.xticks(range(2, 11))
+            plt.xlabel("Number of Clusters")
+            plt.ylabel("SSE")
+            plt.show()
+
+        kl = KneeLocator(range(2, 11), coeff, curve="convex", direction="decreasing")
+        print(kl.elbow)
+
+        return kl.elbow
+
 
 
 

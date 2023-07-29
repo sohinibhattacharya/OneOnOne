@@ -1,10 +1,10 @@
-
 class Classification:
     def __init__(self, model_type="resnet50", batch_size=16, epochs=250, dataset="cifar10", validation_split=0.3, shuffle_bool=True, early_stopping_patience=10, lr_reducer_patience=10):
+        warnings.filterwarnings("ignore")
 
-        self.model_type = model_type
-        self.date = datetime.datetime.now()
-        self.dataset=dataset
+        self.model_type = model_type.lower()
+        self.date=datetime.datetime.now()
+        self.dataset=dataset.lower()
         self.shuffle_bool = shuffle
         self.batch_size = batch_size
         self.epochs = epochs
@@ -20,12 +20,15 @@ class Classification:
             self.output_layer_classes = 10
             self.input_shape = (224,224,3)
 
+        elif self.dataset == "cifar100":
+            self.output_layer_classes = 100
+            self.input_shape = (224, 224, 3)
 
         elif self.dataset=="tinyimagenet":
             self.output_layer_classes = 200
             self.input_shape = (32, 32, 3)
-            from classes import i2d
             self.download_dataset()
+            from classes import i2d
 
         else:
             print("Invalid Input!")
@@ -33,38 +36,44 @@ class Classification:
         self.token=input("Train/Load?  :   ")
         self.train_it, self.val_it = self.get_dataset()
 
-        if self.token.lower() == 'train':
-            print("training")
+        if self.token.lower()=='train':
+            print("Training...")
 
             self.model = self.define_compile_model()
             self.model.summary()
 
-            history = self.model.fit(self.train_it, validation_data=self.val_it,
-                                     epochs=self.epochs, verbose=1, workers=4,
-                                     callbacks=self.callbacks)
+            if self.dataset=="tinyimagenet":
+                history = self.model.fit(self.train_it, validation_data=self.val_it,
+                                         epochs=self.epochs, verbose=1, workers=4,
+                                         callbacks=self.callbacks)
+            else:
+                history = self.model.fit(self.datagen.flow(self.X_train, self.y_train, batch_size=self.batch_size), validation_data=(self.X_test, self.y_test),
+                                         epochs=self.epochs, verbose=1, workers=4,
+                                         callbacks=self.callbacks)
 
-            self.model.save(os.getcwd()+f"/fully_trained/{self.model_type}_{self.dataset}_{self.date}")
+
+            self.model.save(os.getcwd()+f"/trained_models/{self.model_type}_{self.dataset}_{self.date}_completed")
 
             history_token = input("Save/Discard?  :   ")
 
             if history_token.lower()=="save":
-                keys,history_list=self.get_history_details(history)
-                self.save_history_details(history_list,keys)
-                print("saved")
+                with open(f'{self.model_type}_{self.dataset}_{self.date}_history', 'wb') as file_pi:
+                    pickle.dump(history.history, file_pi)
+                print("Saved.")
             elif history_token.lower()=="save":
-                print("discarded")
+                print("Discarded.")
             else:
                 print("Invalid Input!")
 
         elif self.token.lower() == 'load':
-            print("loading")
+            print("Loading...")
 
-            print(os.getcwd())
+            self.model = load_model(os.getcwd()+"/models_to_load/"+f"{self.model_type}_{self.dataset}")
 
-            self.model = load_model(os.getcwd()+"models_to_load/"+f'{self.model_type}_{self.dataset}_none')
+            PRINT("Loading Completed.")
 
         else:
-            print("invalid input")
+            print("Invalid Input!")
 
     def lr_schedule(self, epoch):
         lr = 1e-3
@@ -76,7 +85,7 @@ class Classification:
             lr *= 1e-2
         elif epoch > 80:
             lr *= 1e-1
-        print('Learning rate: ', lr)
+        print('Learning Rate: ', lr)
 
         return lr
 
@@ -115,7 +124,7 @@ class Classification:
                                                                       weights='imagenet',
                                                                       classes=self.output_layer_classes,
                                                                       classifier_activation="softmax")(inputs)
-            print("Invalid argument for model type")
+            print("Invalid argument for model type.")
 
         return feature_extractor
 
@@ -167,7 +176,7 @@ class Classification:
 
     def get_callbacks(self):
 
-        save_dir = os.path.join(os.getcwd(), f'saved_models_{self.model_type}_{self.dataset}_{self.date}')
+        save_dir = os.getcwd()+f'/trained_models/{self.model_type}_{self.dataset}'
         model_name = self.model_type + '_model_' + str(self.date.day) + '_' + str(self.date.month) + '_' + str(
             self.date.year) + '.{epoch:03d}.h5'
 
@@ -192,6 +201,7 @@ class Classification:
         return callbacks
 
     def get_datagen(self):
+
         datagen = ImageDataGenerator(
             featurewise_center=False,
             samplewise_center=False,
@@ -218,35 +228,74 @@ class Classification:
 
     def download_dataset(self):
 
-        print("extracting")
+        print("Extracting...")
         if not 'tiny-imagenet-200.zip' in os.listdir(os.getcwd()):
             url = 'http://cs231n.stanford.edu/tiny-imagenet-200.zip'
-            tiny_imgdataset = wget.download('http://cs231n.stanford.edu/tiny-imagenet-200.zip', out=os.getcwd())
+            tiny_imgdataset = wget.download(url, out=os.getcwd())
 
         for file in os.listdir(os.getcwd()):
             if file.endswith("tiny-imagenet-200.zip"):
                 zip_file = ZipFile(file)
                 zip_file.extractall()
-            else:
-                print("not found")
+
+        try:
+            os.system("gdown --id 1JgRlpet7-P-x7Exweb8HC-zUcYsF5fGN")
+        except:
+            os.system("!gdown --id 1JgRlpet7-P-x7Exweb8HC-zUcYsF5fGN")
+
+        print("Done.")
 
     def get_dataset(self):
 
         if self.dataset=="tinyimagenet":
-            train_it = self.datagen.flow_from_directory('/home/sb355/testing/tiny-imagenet-200/train',
+            train_it = self.datagen.flow_from_directory(os.getcwd()+'/tiny-imagenet-200/train',
                                                         batch_size=self.batch_size, subset="training", shuffle=self.shuffle_bool)
-            val_it = self.datagen.flow_from_directory('/home/sb355/testing/tiny-imagenet-200/train', batch_size=self.batch_size,
+            val_it = self.datagen.flow_from_directory(os.getcwd()+'/tiny-imagenet-200/train', batch_size=self.batch_size,
                                                       subset="validation", shuffle=self.shuffle_bool)
             train_filenames = train_it.filenames
             val_filenames = val_it.filenames
             number_of_val_samples = len(val_filenames)
             number_of_train_samples = len(train_filenames)
             # class_mode='categorical',
-            print(number_of_train_samples)
-            print(number_of_val_samples)
+            # print(number_of_train_samples)
+            # print(number_of_val_samples)
         else:
-            (train_it), (val_it) = tf.keras.datasets.cifar10.load_data()
+            if self.dataset == "cifar10":
+                classes = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
+                num_classes = len(classes)
+                (training_images, training_labels), (
+                    validation_images, validation_labels) = tf.keras.datasets.cifar10.load_data()
 
+                train_X = self.preprocess_image_input(training_images)
+                valid_X = self.preprocess_image_input(validation_images)
+
+            elif self.dataset == "mnist":
+                num_classes = 10
+                (training_images, training_labels), (
+                    validation_images, validation_labels) = tf.keras.datasets.mnist.load_data()
+
+                train_X = self.preprocess_image_input(training_images)
+                valid_X = self.preprocess_image_input(validation_images)
+
+            elif self.dataset == "cifar100":
+                num_classes = 100
+                (training_images, training_labels), (
+                    validation_images, validation_labels) = tf.keras.datasets.cifar100.load_data()
+
+                train_X = self.preprocess_image_input(training_images)
+                valid_X = self.preprocess_image_input(validation_images)
+
+            training_labels = to_categorical(training_labels, num_classes)
+            validation_labels = to_categorical(validation_labels, num_classes)
+            self.datagen.fit(train_X)
+
+            train_it = self.datagen.flow(train_X, training_labels, batch_size=self.batch_size)
+            val_it = (valid_X, validation_labels)
+
+            self.X_train = train_X
+            self.X_test = valid_X
+            self.y_train = training_labels
+            self.y_test = validation_labels
 
         return train_it, val_it
 
@@ -272,51 +321,5 @@ class Classification:
 
         return keys, total_list_parameter_history
 
-    def context_decider_for_bert(self, val_it, prediction_list):
-        pred = self.model.predict_generator(val_it, 1)
-
-        predicted_list = []
-        classes_prob_list = []
-        prediction_index = []
-        final_classes = []
-
-        output = []
-
-        labels = self.val_it.class_indices
-        labels2 = dict((v, k) for k, v in labels.items())
-
-        for i in range(0, pred.shape[0]):
-            classes_prob_list = []
-            for j in range(0, self.output_layer_classes):
-                classes_prob_list.append([int(j), pred[i][j]])
-
-            classes_prob_list.sort(key=lambda x: x[1], reverse=True)
-
-            first_highest_predicted_classes = classes_prob_list[0][0]
-            first_highest_predicted_class_confidence = classes_prob_list[0][1]
-
-            second_highest_predicted_classes = classes_prob_list[1][0]
-            second_highest_predicted_class_confidence = classes_prob_list[1][1]
-
-            predicted_list.append([first_highest_predicted_classes, first_highest_predicted_class_confidence,
-                                   second_highest_predicted_classes, second_highest_predicted_class_confidence])
-
-        if (predicted_list[0][1] - predicted_list[0][3]) >= 0.2:
-            prediction_index.append(predicted_list[0][0])
-        elif (predicted_list[0][1] - predicted_list[0][3]) < 0.2:
-            prediction_index.append(predicted_list[0][0])
-            prediction_index.append(predicted_list[0][2])
-
-        for i in range(0, len(prediction_index)):
-            final_classes.append(i2d[labels2[prediction_index[i]]])
-
-        for ele in final_classes:
-            b = ele.split(',')
-            output = output + b
-
-        return output
-
-
     def evaluate(self):
         loss, accuracy = self.model.evaluate(self.val_it, batch_size=self.batch_size, verbose=1)
-
