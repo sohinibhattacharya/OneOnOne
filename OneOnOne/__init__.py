@@ -66,6 +66,11 @@ import speech_recognition as sr
 import pyttsx3
 import pytesseract
 from googletrans import Translator
+from io import BytesIO
+from base64 import b64decode
+from google.colab import output
+from IPython.display import Javascript
+import PyPDF2
 
 class PretrainedModel:
     def __init__(self, model_type="resnet50", dataset="cifar10", samplingtype="none"):
@@ -1164,13 +1169,12 @@ class ContextDecider:
         from classes import i2d
 
         predicted_list = []
-        classes_prob_list = []
         prediction_index = []
         final_classes = []
 
         output = []
 
-        labels = self.val_it.class_indices
+        labels = self.train_it.class_indices+self.val_it.class_indices
         labels2 = dict((v, k) for k, v in labels.items())
 
         for i in range(0, self.pred.shape[0]):
@@ -1388,24 +1392,35 @@ class QuestionAnswer:
             print(self.question_answer(question))
 
 class TextTranslator:
-    def __init__(self, file_bool=False,filepath=""):
+    def __init__(self, file_bool=False,filepath="", translate_from_language="ben", translate_to_language="en", speak_bool=False):
         self.file_bool=file_bool
         self.filepath=filepath
+        self.translate_from_language = translate_from_language
+        self.translate_to_language = translate_to_language
+        self.speak_bool = speak_bool
 
         if self.file_bool:
-            file = open(os.getcwd()+f"{self.filepath}","r")
+            file = open(os.getcwd()+f"/{self.filepath}","r")
+            text=file.readlines()[0]
             print(file.readlines())
         else:
-            text
+            text=input("What do you want to translate?:     ")
+
+        k = translator.translate(text, dest=self.translate_to_language)
+        with open(f'{self.imgpath}_text_{self.translate_to_language}.txt', mode='w') as file:
+            file.write(k.text)
+        print(k.text)
+
+        if speak_bool:
+            self.speak(k.text)
 
 
 class ImageTranslator:
-    def __init__(self, imgpath=imgpath, translate_from_language="english", translate_to_language="english", speak=False):
+    def __init__(self, imgpath, translate_from_language="ben", translate_to_language="en", speak_bool=False):
         self.translate_from_language=translate_from_language
         self.translate_to_language=translate_to_language
         self.imgpath=imgpath
-        self.speak=self.speak
-        self.date = datetime.datetime.now()
+        self.speak_bool=speak_bool
 
     def speak(self, command):
 
@@ -1425,11 +1440,15 @@ class ImageTranslator:
         try:
             os.system("sudo apt install tesseract-ocr")
             os.system("apt install libtesseract-dev")
+            os.system(f"apt install tesseract-ocr-{self.translate_from_language}")
+            os.system(f"apt install tesseract-ocr-{self.translate_to_language}")
         except:
             os.system("!sudo apt install tesseract-ocr")
             os.system("!apt install libtesseract-dev")
+            os.system(f"!apt install tesseract-ocr-{self.translate_from_language}")
+            os.system(f"!apt install tesseract-ocr-{self.translate_to_language}")
 
-        img = Image.open(os.getcwd()+self.imgpath)
+        img = Image.open(os.getcwd()+"/"+self.imgpath)
 
         result = pytesseract.image_to_string(img,lang=self.translate_from_language)
         with open(f'{self.imgpath}_text_{self.translate_from_language}.txt', mode='w') as file:
@@ -1439,10 +1458,12 @@ class ImageTranslator:
         translator = Translator()
 
         k = translator.translate(result.replace("\n"," ")[:-5], dest=self.translate_to_language)
-        print(k)
+        with open(f'{self.imgpath}_text_{self.translate_to_language}.txt', mode='w') as file:
+            file.write(k.text)
+        print(k.text)
 
-        if speak:
-            self.speak(k)
+        if speak_bool:
+            self.speak(k.text)
 
 
 class Conversation:
@@ -1457,6 +1478,35 @@ class Conversation:
             os.system("!apt install libasound2-dev portaudio19-dev libportaudio2 libportaudiocpp0 ffmpeg")
 
         self.recognizer = sr.Recognizer()
+
+        self.RECORD = """
+                const sleep  = time => new Promise(resolve => setTimeout(resolve, time))
+                const b2text = blob => new Promise(resolve => {
+                  const reader = new FileReader()
+                  reader.onloadend = e => resolve(e.srcElement.result)
+                  reader.readAsDataURL(blob)
+                })
+                var record = time => new Promise(async resolve => {
+                  stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+                  recorder = new MediaRecorder(stream)
+                  chunks = []
+                  recorder.ondataavailable = e => chunks.push(e.data)
+                  recorder.start()
+                  await sleep(time)
+                  recorder.onstop = async ()=>{
+                    blob = new Blob(chunks)
+                    text = await b2text(blob)
+                    resolve(text)
+                  }
+                  recorder.stop()
+                })
+                """
+    def record(self,sec=3):
+        display(Javascript(RECORD))
+        sec += 1
+        s = output.eval_js('record(%d)' % (sec*1000))
+        b = b64decode(s.split(',')[1])
+        return b
 
     def speak(self,command):
 
@@ -1477,31 +1527,79 @@ class Conversation:
 
             try:
 
-                with sr.Microphone() as source2:
+                audio_source = sr.AudioData(self.record(), 16000, 2)
 
-                    r.adjust_for_ambient_noise(source2,duration=5)
-                    print("Listening...")
+                question = self.recognize_google(audio_data=audio_source,language = 'en-IN')
+                question = question.lower()
 
-                    audio2 = r.listen(source2,timeout=5,phrase_time_limit=5)
+                print(f"{question}?")
+                # self.speak(question)
 
-                    print("Recognizing...")
-
-                    question = self.recognizer.recognize_google(audio2,language = 'en-IN')
-                    question = question.lower()
-
-                    print("Did you say " + question)
-                    self.speak(question)
-
-                    answer_output=self.answer(question)
-                    self.speak(answer_output)
+                answer_output=self.answer(question)
+                self.speak(answer_output)
+                #
+                # with sr.Microphone() as source2:
+                #
+                #     r.adjust_for_ambient_noise(source2,duration=5)
+                #     print("Listening...")
+                #
+                #     audio2 = r.listen(source2,timeout=5,phrase_time_limit=5)
+                #
+                #     print("Recognizing...")
+                #
+                #     question = self.recognizer.recognize_google(audio2,language = 'en-IN')
+                #     question = question.lower()
+                #
+                #     print("Did you say " + question)
+                #     self.speak(question)
+                #
+                #     answer_output=self.answer(question)
+                #     self.speak(answer_output)
 
             except sr.RequestError as e:
                 print("Could not request results; {0}".format(e))
 
             except sr.UnknownValueError:
-                print("unknown error occured")
+                print("Unknown Error Occured")
 
 
+class PDFtoText:
+    def __init__(self, pdfpath, speak_bool=False):
+        self.pdfpath = imgpath
+        self.speak_bool = speak_bool
+
+    def convert(self, command):
+
+        engine = pyttsx3.init()
+        engine.say(command)
+        engine.runAndWait()
+
+        if speak:
+            try:
+                os.system("sudo apt install espeak")
+                os.system("sudo apt install libespeak-dev")
+            except:
+                os.system("!sudo apt install espeak")
+                os.system("!sudo apt install libespeak-dev")
+
+        path = open(os.getcwd() + f'/{self.pdfpath}', 'rb')
+
+        pdfReader = PyPDF2.PdfFileReader(path)
+
+        output = ""
+        for i in range(pdfReader.numPages):
+            pageObj = pdfReader.getPage(i)
+            output += pageObj.extractText()
+
+        with open(f'{self.pdfpath}_text.txt', mode='w') as file:
+            file.write(output)
+
+        print(output)
+
+        if speak_bool:
+            self.speak(k.text)
+
+        return output
 
 
 class Clustering:
