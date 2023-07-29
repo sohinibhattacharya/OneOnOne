@@ -5,7 +5,7 @@
   </a>
 </p>
 
-<h3 align="center"><span style="color:#FFC0CB">Your one-stop destination to utilize image-classification models with just one line of code.</span></h3>
+<h3 align="center"><span style="color:#FFC0CB">Your one-stop destination to utilize an interface like GoogleLens with just one line of code.</span></h3>
 
 <h4 align="center">
 A python library meant to simplify your life by providing you with pre-trained models like ResNet50, EfficientNetVB6, VGG19, etc.
