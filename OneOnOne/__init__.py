@@ -128,14 +128,7 @@ class Classification:
         self.batch_size = batch_size
         self.epochs = epochs
         self.output_layer_classes=0
-        self.input_shape = (32,32,3)
-        self.early_stopping_patience=early_stopping_patience
-        self.lr_reducer_patience=lr_reducer_patience
-        self.validation_split = validation_split
-        self.callbacks = self.get_callbacks()
-        self.datagen = self.get_datagen()
-
-        if self.dataset=="cifar10":
+        if self.dataset=="cifar10" or self.dataset=="mnist":
             self.output_layer_classes = 10
             self.input_shape = (224,224,3)
 
@@ -151,6 +144,14 @@ class Classification:
 
         else:
             print("Invalid Input!")
+        # self.input_shape = (32,32,3)
+        self.early_stopping_patience=early_stopping_patience
+        self.lr_reducer_patience=lr_reducer_patience
+        self.validation_split = validation_split
+        self.callbacks = self.get_callbacks()
+        self.datagen = self.get_datagen()
+
+
 
         self.token=input("Train/Load?  :   ")
         self.train_it, self.val_it = self.get_dataset()
@@ -217,7 +218,7 @@ class Classification:
     def feature_extractor(self, inputs):
 
         if self.model_type == "resnet50":
-            feature_extractor = tf.keras.applications.resnet.ResNet50(input_shape=self.input_shape,
+            feature_extractor = tf.keras.applications.resnet50.ResNet50(input_shape=self.input_shape,
                                                                       include_top=False,
                                                                       weights='imagenet', classes=self.output_layer_classes,
                                                                       classifier_activation="softmax")(inputs)
@@ -263,7 +264,7 @@ class Classification:
         return classification_output
 
     def define_compile_model(self):
-        inputs = tf.keras.layers.Input(shape=self.input_shape)
+        inputs = tf.keras.layers.Input(shape=(32,32,3))
 
         classification_output = self.final_model(inputs)
         model = tf.keras.Model(inputs=inputs, outputs=classification_output)
@@ -445,7 +446,7 @@ class Classification:
 
 
 class Sampling:
-    def __init__(self, samplingtype, dataset="cifar10", model_type = "resnet50", goal=99, jump=5000, validation_split=0.3, first_data_samples=10000, batch_size = 16, epochs = 250, shuffle_bool = True, early_stopping_patience = 10, lr_reducer_patience = 10):
+    def __init__(self, samplingtype="mixedbayes", dataset="cifar10", model_type = "resnet50", goal=99, jump=5000, validation_split=0.3, first_data_samples=10000, batch_size = 16, epochs = 250, shuffle_bool = True, early_stopping_patience = 10, lr_reducer_patience = 10):
         warnings.filterwarnings("ignore")
 
         self.validation_split=validation_split
@@ -458,15 +459,16 @@ class Sampling:
         self.batch_size = batch_size
         self.dataset = dataset.lower()
         self.output_layer_classes = 0
-        self.input_shape = (32, 32, 3)
+        # self.input_shape = (32, 32, 3)
         self.date=datetime.datetime.now()
         self.first_data_samples = first_data_samples
         self.early_stopping_patience = early_stopping_patience
         self.lr_reducer_patience = lr_reducer_patience
-        self.callbacks = self.get_callbacks()
-        self.datagen = self.get_datagen()
         if self.dataset == "cifar10" or self.dataset == "mnist":
             self.output_layer_classes = 10
+            self.input_shape = (224, 224, 3)
+        elif self.dataset == "cifar100":
+            self.output_layer_classes = 100
             self.input_shape = (224, 224, 3)
         elif self.dataset == "tinyimagenet":
             self.output_layer_classes = 200
@@ -475,6 +477,9 @@ class Sampling:
             from classes import i2d
         else:
             print("Invalid Input!")
+        self.callbacks = self.get_callbacks()
+        self.datagen = self.get_datagen()
+
 
         self.train_it, self.val_it = self.get_dataset()
 
@@ -505,7 +510,7 @@ class Sampling:
     def feature_extractor(self, inputs):
 
         if self.model_type == "resnet50":
-            feature_extractor = tf.keras.applications.resnet.ResNet50(input_shape=self.input_shape,
+            feature_extractor = tf.keras.applications.resnet50.ResNet50(input_shape=self.input_shape,
                                                                       include_top=False,
                                                                       weights='imagenet',
                                                                       classes=self.output_layer_classes,
@@ -553,7 +558,7 @@ class Sampling:
         return classification_output
 
     def define_compile_model(self):
-        inputs = tf.keras.layers.Input(shape=self.input_shape)
+        inputs = tf.keras.layers.Input(shape=(32,32,3))
 
         classification_output = self.final_model(inputs)
         model = tf.keras.Model(inputs=inputs, outputs=classification_output)
@@ -1107,7 +1112,7 @@ class ContextDecider:
 
         if self.load:
             path=input("Please input the model's path/name in the current directory (str):     ")
-            self.contextmodel=load_model(os.getcwd()+path)
+            self.contextmodel=load_model(os.getcwd()+"/"+path)
         else:
             # check=False
             # for file in os.listdir(os.getcwd()):
@@ -1123,19 +1128,20 @@ class ContextDecider:
 
         if self.user_input:
             path=input("Please enter image path in the current directory (str):    ")
-            img = Image.open(os.getcwd() + f"{path}")
+            img = Image.open(os.getcwd() + f"/{path}")
             img.show()
 
-            img = load_img(os.getcwd() + f"{path}")
+            img = load_img(os.getcwd() + f"/{path}")
             img = img.resize((32, 32))
             img = img_to_array(img)
 
             img = img.reshape(1, 32, 32, 3)
             # img = iio.imread(os.getcwd()+f"{path}")
-            self.pred = self.contextmodel.predict_generator(img, steps = self.batch_size)
+            self.pred = self.contextmodel.predict_generator(img)
         else:
             # random.randint(1, 3000)
             # np.ceil(self.number_of_val_samples / self.batch_size)
+            # , steps = self.batch_size
             self.pred = self.contextmodel.predict_generator(self.val_it, steps = self.batch_size)
 
     def get_datagen(self):
@@ -1164,6 +1170,26 @@ class ContextDecider:
 
         return datagen
 
+    def preprocess_image_input(self, input_images):
+        if self.model_type == "efficientnetb6":
+            input_images = input_images.astype('float32')
+            output_ims = tf.keras.applications.efficientnet.preprocess_input(input_images)
+        elif self.model_type == "resnet50":
+            input_images = input_images.astype('float32')
+            output_ims = tf.keras.applications.resnet50.preprocess_input(input_images)
+        elif self.model_type == "densenet":
+            input_images = input_images.astype('float32')
+            output_ims = tf.keras.applications.densenet.preprocess_input(input_images)
+        elif self.model_type == "vgg19":
+            input_images = input_images.astype('float32')
+            output_ims = tf.keras.applications.vgg19.preprocess_input(input_images)
+        else:
+            input_images = input_images.astype('float32')
+            output_ims = tf.keras.applications.resnet50.preprocess_input(input_images)
+
+        return output_ims
+
+
     def decide_context(self):
 
         from classes import i2d
@@ -1174,7 +1200,7 @@ class ContextDecider:
 
         output = []
 
-        labels = self.train_it.class_indices+self.val_it.class_indices
+        labels = self.combined_it.class_indices
         labels2 = dict((v, k) for k, v in labels.items())
 
         for i in range(0, self.pred.shape[0]):
@@ -1236,6 +1262,9 @@ class ContextDecider:
             val_it = self.datagen.flow_from_directory(os.getcwd() + '/tiny-imagenet-200/train',
                                                       batch_size=self.batch_size,
                                                       subset="validation", shuffle=self.shuffle_bool,seed=random.randint(1,100))
+
+            self.combined_it = self.datagen.flow_from_directory(os.getcwd() + '/tiny-imagenet-200/train', batch_size=self.batch_size,)
+
             train_filenames = train_it.filenames
             val_filenames = val_it.filenames
             self.number_of_val_samples = len(val_filenames)
@@ -1391,6 +1420,8 @@ class QuestionAnswer:
 
             print(self.question_answer(question))
 
+
+# https://tesseract-ocr.github.io/tessdoc/Data-Files-in-different-versions.html
 class TextTranslator:
     def __init__(self, file_bool=False,filepath="", translate_from_language="ben", translate_to_language="en", speak_bool=False):
         self.file_bool=file_bool
@@ -1399,6 +1430,28 @@ class TextTranslator:
         self.translate_to_language = translate_to_language
         self.speak_bool = speak_bool
 
+        if self.speak_bool:
+            try:
+                os.system("sudo apt install espeak")
+                os.system("sudo apt install libespeak-dev")
+                os.system("pip install pyaudio")
+                os.system("sudo apt install python3-pyaudio")
+                os.system("sudo apt install portaudio19 - dev")
+
+            except:
+                os.system("!sudo apt install espeak")
+                os.system("!sudo apt install libespeak-dev")
+                os.system("!pip install pyaudio")
+                os.system("!sudo apt install python3-pyaudio")
+                os.system("!sudo apt install portaudio19 - dev")
+
+    def speak(self, command):
+        engine = pyttsx3.init()
+        engine.say(command)
+        engine.runAndWait()
+
+    def translate(self):
+
         if self.file_bool:
             file = open(os.getcwd()+f"/{self.filepath}","r")
             text=file.readlines()[0]
@@ -1406,12 +1459,14 @@ class TextTranslator:
         else:
             text=input("What do you want to translate?:     ")
 
+        translator = Translator()
+
         k = translator.translate(text, dest=self.translate_to_language)
         with open(f'{self.imgpath}_text_{self.translate_to_language}.txt', mode='w') as file:
             file.write(k.text)
         print(k.text)
 
-        if speak_bool:
+        if self.speak_bool:
             self.speak(k.text)
 
 
@@ -1422,20 +1477,30 @@ class ImageTranslator:
         self.imgpath=imgpath
         self.speak_bool=speak_bool
 
+
+
+        if self.speak_bool:
+            try:
+                os.system("sudo apt install espeak")
+                os.system("sudo apt install libespeak-dev")
+                os.system("pip install pyaudio")
+                os.system("sudo apt install python3-pyaudio")
+                os.system("sudo apt install portaudio19 - dev")
+
+            except:
+                os.system("!sudo apt install espeak")
+                os.system("!sudo apt install libespeak-dev")
+                os.system("!pip install pyaudio")
+                os.system("!sudo apt install python3-pyaudio")
+                os.system("!sudo apt install portaudio19 - dev")
+
     def speak(self, command):
 
         engine = pyttsx3.init()
         engine.say(command)
         engine.runAndWait()
 
-        if speak:
-            try:
-                os.system("sudo apt install espeak")
-                os.system("sudo apt install libespeak-dev")
-            except:
-                os.system("!sudo apt install espeak")
-                os.system("!sudo apt install libespeak-dev")
-
+    def translate(self):
 
         try:
             os.system("sudo apt install tesseract-ocr")
@@ -1462,7 +1527,7 @@ class ImageTranslator:
             file.write(k.text)
         print(k.text)
 
-        if speak_bool:
+        if self.speak_bool:
             self.speak(k.text)
 
 
@@ -1596,7 +1661,7 @@ class PDFtoText:
 
         print(output)
 
-        if speak_bool:
+        if self.speak_bool:
             self.speak(k.text)
 
         return output

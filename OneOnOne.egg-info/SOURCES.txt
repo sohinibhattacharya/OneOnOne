@@ -4,10 +4,16 @@ setup.py
 OneOnOne/__init__.py
 OneOnOne/classes.py
 OneOnOne/classification.py
+OneOnOne/clustering.py
 OneOnOne/contextdecider.py
+OneOnOne/conversation.py
 OneOnOne/htmlparser.py
+OneOnOne/imagetranslator.py
+OneOnOne/pdftotext.py
+OneOnOne/pretrainedmodel.py
 OneOnOne/questionanswer.py
 OneOnOne/sampling.py
+OneOnOne/texttranslator.py
 OneOnOne.egg-info/PKG-INFO
 OneOnOne.egg-info/SOURCES.txt
 OneOnOne.egg-info/dependency_links.txt

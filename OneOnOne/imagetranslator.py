@@ -5,21 +5,27 @@ class ImageTranslator:
         self.imgpath=imgpath
         self.speak_bool=speak_bool
 
+        if self.speak_bool:
+            try:
+                os.system("sudo apt install espeak")
+                os.system("sudo apt install libespeak-dev")
+                os.system("pip install pyaudio")
+                os.system("sudo apt install python3-pyaudio")
+            except:
+                os.system("!sudo apt install espeak")
+                os.system("!sudo apt install libespeak-dev")
+                os.system("!pip install pyaudio")
+                os.system("!sudo apt install python3-pyaudio")
+
     def speak(self, command):
 
         engine = pyttsx3.init()
         engine.say(command)
         engine.runAndWait()
 
-        if speak:
-            try:
-                os.system("sudo apt install espeak")
-                os.system("sudo apt install libespeak-dev")
-            except:
-                os.system("!sudo apt install espeak")
-                os.system("!sudo apt install libespeak-dev")
 
 
+    def translate(self):
         try:
             os.system("sudo apt install tesseract-ocr")
             os.system("apt install libtesseract-dev")
