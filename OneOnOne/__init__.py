@@ -33,25 +33,25 @@ from sklearn import metrics
 from sklearn import preprocessing
 from sklearn.utils import shuffle
 
-from transformers import pipeline
-from transformers import BlipProcessor, BlipForQuestionAnswering
-from transformers import GPT2Tokenizer, GPT2ForQuestionAnswering
-from transformers import AutoTokenizer, AutoModel
-from transformers import AutoTokenizer, RobertaForQuestionAnswering
-from transformers import BertForQuestionAnswering, BertTokenizer
-from transformers import AutoTokenizer, ErnieModel
-from transformers import pipeline, Conversation
+# from transformers import pipeline
+# from transformers import BlipProcessor, BlipForQuestionAnswering
+# from transformers import GPT2Tokenizer, GPT2ForQuestionAnswering
+# from transformers import AutoTokenizer, AutoModel
+# from transformers import AutoTokenizer, RobertaForQuestionAnswering
+# from transformers import BertForQuestionAnswering, BertTokenizer
+# from transformers import AutoTokenizer, ErnieModel
+# from transformers import pipeline, Conversation
 
 import torch
-from torchvision import transforms
-
-from bs4 import BeautifulSoup
-import re
-from tqdm import keras
-import pkgutil
-import requests, zipfile
-from io import BytesIO
-import gdown
+# from torchvision import transforms
+#
+# from bs4 import BeautifulSoup
+# import re
+# from tqdm import keras
+# import pkgutil
+# import requests, zipfile
+# from io import BytesIO
+# import gdown
 
 from PIL import Image
 from tensorflow.keras.preprocessing.image import load_img, img_to_array
@@ -59,19 +59,19 @@ from tensorflow.keras.preprocessing.image import load_img, img_to_array
 import warnings
 
 import copy
-from bayes_opt import BayesianOptimization
+# from bayes_opt import BayesianOptimization
 tf.config.run_functions_eagerly(True)
 
-from pydub import AudioSegment
-import speech_recognition as sr
-import pyttsx3
-import pytesseract
-from googletrans import Translator
-from io import BytesIO
-from base64 import b64decode
-from google.colab import output
-from IPython.display import Javascript
-import PyPDF2
+# from pydub import AudioSegment
+# import speech_recognition as sr
+# import pyttsx3
+# import pytesseract
+# from googletrans import Translator
+# from io import BytesIO
+# from base64 import b64decode
+# from google.colab import output
+# from IPython.display import Javascript
+# import PyPDF2
 
 class PretrainedModel:
     def __init__(self, model_type="resnet50", dataset="cifar10", sampling_type="none", first_data_samples=0):
@@ -158,7 +158,7 @@ class Classification:
             self.model_params["train_or_load"] = train_or_load
             self.model_params["sampling_type"] = sampling_type
 
-            self.date = datetime.datetime.now()
+        self.date = datetime.datetime.now()
 
         if self.model_params["dataset"] =="cifar10" or self.model_params["dataset"] =="mnist":
             output_layer_classes = 10
@@ -184,7 +184,10 @@ class Classification:
         self.callbacks = self.get_callbacks()
         self.datagen = self.get_datagen()
 
-        self.training_dir = os.getcwd() + f"/trained_models/"+str(self.model_params["model_type"])+"/"+str(self.model_params["dataset"])+"/"+self.model_params["sampling_type"]+"_"+str({self.model_params["first_data_samples"]})+"k"
+        self.training_dir = os.getcwd() + f"/trained_models/"+str(self.model_params["model_type"])+"/"+str(self.model_params["dataset"])+"/"+self.model_params["sampling_type"]+"_"+str(self.model_params["first_data_samples"])+"k"
+
+        if not os.path.isdir(self.training_dir):
+            os.makedirs(self.training_dir)
 
         self.train_it, self.val_it = self.get_dataset()
 
@@ -205,7 +208,7 @@ class Classification:
 
             self.model.save(self.training_dir)
 
-            with open(f'{self.model_type}_{self.dataset}_{self.date}_history', 'wb') as handle:
+            with open(f'{self.model_params["model_type"]}_{self.model_params["dataset"]}_{self.date}_history', 'wb') as handle:
                 pickle.dump(history, handle)
             print("Saved.")
 
@@ -323,7 +326,7 @@ class Classification:
         callback_dir = os.getcwd() + f'/saved_callbacks/{self.model_params["model_type"]}/{self.model_params["dataset"]}/{self.model_params["sampling_type"]}_{self.model_params["first_data_samples"]}'
 
         # save_dir = os.getcwd()+f'/trained_models/{self.model_type}/{self.dataset}/{"no sampling"}'
-        model_name = self.model_type + '_model_' + str(self.date.day) + '_' + str(self.date.month) + '_' + str(
+        model_name = self.model_params["model_type"] + '_model_' + str(self.date.day) + '_' + str(self.date.month) + '_' + str(
             self.date.year) + '.{epoch:03d}.h5'
 
         if not os.path.isdir(callback_dir):
@@ -473,13 +476,13 @@ class Classification:
 
 
 class Sampling:
-    def __init__(self, file_input_params=False, filepath="", sampling_type="mixedbayes", dataset="cifar10", model_type = "resnet50", goal=99, jump=5000, validation_split=0.3, first_data_samples=10000, batch_size = 16, epochs = 250, shuffle_bool = True, early_stopping_patience = 10, lr_reducer_patience = 10, save_and_reload_bool=True,load_saved_model_bool=False):
+    def __init__(self, file_input_params=False, filepath="", sampling_type="mixedbayes", dataset="cifar10", model_type = "resnet50", goal=99, jump=5000, validation_split=0.3, first_data_samples=10000, batch_size = 16, epochs = 250, shuffle_bool = True, early_stopping_patience = 10, lr_reducer_patience = 10, save_and_reload_bool=True,load_saved_model_bool=False, shuffle_training_data_bool=False, shuffle_training_data_seed=float('inf')):
         warnings.filterwarnings("ignore")
 
         self.model_params={}
 
-        numeric_args=["goal","jump","validation_split","first_data_samples", "batch_size", "epochs", "early_stopping_patience", "lr_reducer_patience"]
-        boolean_args=["shuffle_bool", "save_and_reload_bool", "load_saved_model_bool"]
+        numeric_args=["goal","jump","validation_split","first_data_samples", "batch_size", "epochs", "early_stopping_patience", "lr_reducer_patience", "shuffle_training_data_seed"]
+        boolean_args=["shuffle_bool", "save_and_reload_bool", "load_saved_model_bool", "shuffle_training_data_bool"]
 
         if file_input_params:
 
@@ -507,11 +510,13 @@ class Sampling:
             self.model_params["shuffle_bool"] = shuffle_bool
             self.model_params["batch_size"] = batch_size
             self.model_params["dataset"] = dataset
-            self.model_params["load_saved_model"] = load_saved_model_bool
-            self.model_params["save_and_reload"] = save_and_reload_bool
+            self.model_params["load_saved_model_bool"] = load_saved_model_bool
+            self.model_params["save_and_reload_bool"] = save_and_reload_bool
             self.model_params["first_data_samples"] = first_data_samples
             self.model_params["early_stopping_patience"] = early_stopping_patience
             self.model_params["lr_reducer_patience"] = lr_reducer_patience
+            self.model_params["shuffle_training_data_seed"] = shuffle_training_data_seed
+            self.model_params["shuffle_training_data_bool"] = shuffle_training_data_bool
 
         if self.model_params["dataset"] == "cifar10" or self.model_params["dataset"] == "mnist":
             output_layer_classes = 10
@@ -529,25 +534,30 @@ class Sampling:
 
         self.model_params["output_layer_classes"] = output_layer_classes
         self.model_params["input_shape"] = input_shape
+        self.date = datetime.datetime.now()
 
-        with open(self.model_params + '/model_params.pickle', 'wb') as handle:
+
+        self.training_dir = os.getcwd() + f"/trained_models/"+str(self.model_params["model_type"])+"/"+str(self.model_params["dataset"])+"/"+str(self.model_params["sampling_type"])+"_"+str(self.model_params["first_data_samples"])+"k"
+
+        if not os.path.isdir(self.training_dir):
+            os.makedirs(self.training_dir)
+
+        with open(self.training_dir + '/model_params.pickle', 'wb') as handle:
             pickle.dump(self.model_params, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-        self.training_dir = os.getcwd() + f"/trained_models/"+str(self.model_params["model_type"])+"/"+str(self.model_params["dataset"])+"/"+str(self.model_params["sampling_type"])+"_"+str({self.model_params["first_data_samples"]})+"k"
 
         self.callbacks = self.get_callbacks()
         self.datagen = self.get_datagen()
 
         self.train_it, self.val_it = self.get_dataset()
 
-        if self.save_and_reload:
-            self.save_and_reload_dir = os.getcwd() + f'/reload_params/{self.model_type}/{self.dataset}/{self.sampling_type}_{self.first_data_samples}'
+        if self.model_params["save_and_reload_bool"]:
+            self.save_and_reload_dir = os.getcwd() + f'/reload_params/{self.model_params["model_type"]}/{self.model_params["dataset"]}/{self.model_params["sampling_type"]}_{self.model_params["first_data_samples"]}'
 
-            if not os.path.isdir(save_and_reload_dir):
+            if not os.path.isdir(self.save_and_reload_dir):
                 os.makedirs(self.save_and_reload_dir)
 
-        if not self.load_saved_model:
-            self.model_sampling_data = {"accuracy":[0,0],"timestamps":[],"history":[],"x_train":[],"y_train":[],"x":[],"y":[]}
+        if not self.model_params["load_saved_model_bool"]:
+            self.model_sampling_data = {"accuracy":[[0,0]],"timestamps":[],"history":[],"x_train":[],"y_train":[],"x":[],"y":[]}
             if self.model_params["sampling_type"] == "mixedbayes":
                 self.model_sampling_data["least_confidence_jump"] = []
                 self.model_sampling_data["high_confidence_jump"] = []
@@ -557,6 +567,8 @@ class Sampling:
 
             with open('model_params.pickle', 'rb') as handle:
                 self.model_params = pickle.load(handle)
+
+            # self.model=load_model()
 
         if self.model_params["sampling_type"] == "random":
           random_num = np.random.randint(self.model_params["first_data_samples"],self.x_train.shape[0],size=self.x_train.shape[0]-self.model_params["first_data_samples"])
@@ -671,7 +683,7 @@ class Sampling:
 
         if not os.path.isdir(callback_dir):
             os.makedirs(callback_dir)
-        model_name = self.model_type + '_model_' + str(self.date.day) + '_' + str(self.date.month) + '_' + str(
+        model_name = self.model_params["model_type"] + '_model_' + str(self.date.day) + '_' + str(self.date.month) + '_' + str(
             self.date.year) + '.{epoch:03d}.h5'
 
         if not os.path.isdir(callback_dir):
@@ -761,12 +773,12 @@ class Sampling:
 
         else:
 
-            self.model_params["shuffle_random_token"] = input("Do you want to shuffle the training data? (yes/no):  ")
+            # self.model_params["shuffle_training_data_bool"] = input("Do you want to shuffle the training data? (yes/no):  ")
 
-            if self.model_params["shuffle_random_token"].lower() == "yes":
-                self.model_params["shuffle_seed_token"] = input("Enter random seed (int):  ")
+            if self.model_params["shuffle_training_data_bool"]:
+                self.model_params["shuffle_training_data_seed"] = input("Enter random seed (int):  ")
             else:
-                self.model_params["shuffle_seed_token"] = float('inf')
+                self.model_params["shuffle_training_data_seed"] = float('inf')
 
             if self.model_params["dataset"] == "cifar10":
                 classes = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
@@ -777,7 +789,7 @@ class Sampling:
                 train_X = self.preprocess_image_input(training_images)
                 valid_X = self.preprocess_image_input(validation_images)
 
-                if self.model_params["shuffle_seed_token"]!=float('inf'):
+                if self.model_params["shuffle_training_data_seed"]!=float('inf'):
                     random.Random(seed_token).shuffle(train_X)
                     random.Random(seed_token).shuffle(training_labels)
 
@@ -789,7 +801,7 @@ class Sampling:
                 train_X = self.preprocess_image_input(training_images)
                 valid_X = self.preprocess_image_input(validation_images)
 
-                if self.model_params["shuffle_seed_token"] != float('inf'):
+                if self.model_params["shuffle_training_data_seed"] != float('inf'):
                     random.Random(seed_token).shuffle(train_X)
                     random.Random(seed_token).shuffle(training_labels)
 
@@ -801,7 +813,7 @@ class Sampling:
                 train_X = self.preprocess_image_input(training_images)
                 valid_X = self.preprocess_image_input(validation_images)
 
-                if self.model_params["shuffle_seed_token"] != float('inf'):
+                if self.model_params["shuffle_training_data_seed"] != float('inf'):
                     random.Random(seed_token).shuffle(train_X)
                     random.Random(seed_token).shuffle(training_labels)
 
@@ -826,9 +838,9 @@ class Sampling:
 
         used_up_data=0
 
-        for i in range(0,self.first_data_samples):
-          self.y=self.y_train[:self.first_data_samples]
-          self.x=self.x_train[:self.first_data_samples]
+        for i in range(0,self.model_params["first_data_samples"]):
+          self.y=self.y_train[:self.model_params["first_data_samples"]]
+          self.x=self.x_train[:self.model_params["first_data_samples"]]
 
         while (e[1] < self.goal / 100)&(used_up_data + self.jump < self.x_train.shape[0]):
 
@@ -839,7 +851,7 @@ class Sampling:
             used_up_data=used_up_data+self.jump
 
             h=self.model.fit(self.datagen.flow(np.array(self.x), np.array(self.y), batch_size=self.batch_size), validation_data=self.val_it,
-                                     epochs=self.epochs, verbose=1, workers=4,
+                                     epochs=self.model_params["epochs"], verbose=1, workers=4,
                                      callbacks=self.callbacks)
 
             self.model_sampling_data["history"].append(h)
@@ -937,8 +949,8 @@ class Sampling:
 
             self.model.summary()
 
-            history = self.model.fit(self.datagen.flow(self.x_train[:self.first_data_samples], self.y_train[:self.first_data_samples], batch_size=self.batch_size), validation_data=(self.X_test, self.y_test),
-                                     epochs=self.epochs, verbose=1, workers=4,
+            history = self.model.fit(self.datagen.flow(self.x_train[:self.model_params["first_data_samples"]], self.y_train[:self.model_params["first_data_samples"]], batch_size=self.model_params["batch_size"]), validation_data=(self.X_test, self.y_test),
+                                     epochs=self.model_params["epochs"], verbose=1, workers=4,
                                      callbacks=self.callbacks)
 
         self.model.save(self.training_dir)
@@ -1005,7 +1017,7 @@ class Sampling:
         if self.model_params["sampling_type"] == "random":
           return self.get_iterations_random_sampling()
 
-        if self.loaded_bool:
+        if self.model_params["load_saved_model_bool"]:
             self.x_train_remaining=self.model_sampling_data["x_train"]
             self.y_train_remaining = self.model_sampling_data["y_train"]
             self.x=self.model_sampling_data["x"]
@@ -1052,7 +1064,7 @@ class Sampling:
                     self.x.append(self.x_train_remaining[values_hc[i][0]])
                     self.y.append(self.y_train_remaining[values_hc[i][0]])
 
-            elif self.sampling_type== "mixedbayes":
+            elif self.model_params["sampling_type"]== "mixedbayes":
                 self.model.save(os.getcwd() + "/model_for_bayes_optimization.h5")
 
                 least_confidence_coeff = self.get_bayes_coeff()
@@ -1122,7 +1134,7 @@ class Sampling:
 
         self.model.save(self.training_dir+f"/{self.date}")
 
-        with open(self.model_params + '/model_params.pickle', 'wb') as handle:
+        with open(self.training_dir + '/model_params.pickle', 'wb') as handle:
             pickle.dump(self.model_params, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 class HTMLparser:
