@@ -1,3 +1,4 @@
+time
 wget
 pytesseract
 bayesian-optimization
