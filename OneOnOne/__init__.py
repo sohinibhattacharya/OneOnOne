@@ -33,25 +33,25 @@ from sklearn import metrics
 from sklearn import preprocessing
 from sklearn.utils import shuffle
 
-# from transformers import pipeline
-# from transformers import BlipProcessor, BlipForQuestionAnswering
-# from transformers import GPT2Tokenizer, GPT2ForQuestionAnswering
-# from transformers import AutoTokenizer, AutoModel
-# from transformers import AutoTokenizer, RobertaForQuestionAnswering
-# from transformers import BertForQuestionAnswering, BertTokenizer
-# from transformers import AutoTokenizer, ErnieModel
-# from transformers import pipeline, Conversation
+from transformers import pipeline
+from transformers import BlipProcessor, BlipForQuestionAnswering
+from transformers import GPT2Tokenizer, GPT2ForQuestionAnswering
+from transformers import AutoTokenizer, AutoModel
+from transformers import AutoTokenizer, RobertaForQuestionAnswering
+from transformers import BertForQuestionAnswering, BertTokenizer
+from transformers import AutoTokenizer, ErnieModel
+from transformers import pipeline, Conversation
 
 import torch
-# from torchvision import transforms
-#
-# from bs4 import BeautifulSoup
-# import re
-# from tqdm import keras
-# import pkgutil
-# import requests, zipfile
-# from io import BytesIO
-# import gdown
+from torchvision import transforms
+
+from bs4 import BeautifulSoup
+import re
+from tqdm import keras
+import pkgutil
+import requests, zipfile
+from io import BytesIO
+import gdown
 
 from PIL import Image
 from tensorflow.keras.preprocessing.image import load_img, img_to_array
@@ -59,19 +59,19 @@ from tensorflow.keras.preprocessing.image import load_img, img_to_array
 import warnings
 
 import copy
-# from bayes_opt import BayesianOptimization
+from bayes_opt import BayesianOptimization
 tf.config.run_functions_eagerly(True)
 
-# from pydub import AudioSegment
-# import speech_recognition as sr
-# import pyttsx3
-# import pytesseract
-# from googletrans import Translator
-# from io import BytesIO
-# from base64 import b64decode
-# from google.colab import output
-# from IPython.display import Javascript
-# import PyPDF2
+from pydub import AudioSegment
+import speech_recognition as sr
+import pyttsx3
+import pytesseract
+from googletrans import Translator
+from io import BytesIO
+from base64 import b64decode
+from google.colab import output
+from IPython.display import Javascript
+import PyPDF2
 
 class PretrainedModel:
     def __init__(self, model_type="resnet50", dataset="cifar10", sampling_type="none", first_data_samples=0):
@@ -122,9 +122,26 @@ class Classification:
 
         self.model_params = {}
 
-        numeric_args = ["goal", "jump", "validation_split", "first_data_samples", "batch_size", "epochs",
-                        "early_stopping_patience", "lr_reducer_patience"]
+        numeric_args = ["goal", "jump", "first_data_samples", "batch_size", "epochs", "early_stopping_patience", "lr_reducer_patience"]
         boolean_args = ["shuffle_bool", "save_and_reload_bool", "load_saved_model_bool"]
+        float_args = ["validation_split"]
+
+        self.model_params["validation_split"] = validation_split
+        self.model_params["model_type"] = model_type.lower()
+        self.model_params["epochs"] = epochs
+        self.model_params["jump"] = jump
+        self.model_params["sampling_type"] = sampling_type.lower()
+        self.model_params["goal"] = goal
+        self.model_params["shuffle_bool"] = shuffle_bool
+        self.model_params["batch_size"] = batch_size
+        self.model_params["dataset"] = dataset
+        self.model_params["load_saved_model_bool"] = load_saved_model_bool
+        self.model_params["save_and_reload_bool"] = save_and_reload_bool
+        self.model_params["first_data_samples"] = first_data_samples
+        self.model_params["early_stopping_patience"] = early_stopping_patience
+        self.model_params["lr_reducer_patience"] = lr_reducer_patience
+        self.model_params["shuffle_training_data_seed"] = shuffle_training_data_seed
+        self.model_params["shuffle_training_data_bool"] = shuffle_training_data_bool
 
         if file_input_params:
 
@@ -135,6 +152,8 @@ class Classification:
                 var, val = line.split(" ")
                 if var in numeric_args:
                     val = int(val)
+                elif var in float_args:
+                    val = float(val)
                 elif var in boolean_args:
                     if val == "True":
                         val = True
@@ -142,21 +161,6 @@ class Classification:
                         val = False
                 self.model_params[var] = val
 
-        else:
-            self.model_params["validation_split"] = validation_split
-            self.model_params["model_type"] = model_type.lower()
-            self.model_params["epochs"] = epochs
-            self.model_params["jump"] = jump
-            self.model_params["shuffle_bool"] = shuffle_bool
-            self.model_params["batch_size"] = batch_size
-            self.model_params["dataset"] = dataset.lower()
-            self.model_params["load_saved_model"] = load_saved_model_bool
-            self.model_params["save_and_reload"] = save_and_reload_bool
-            self.model_params["first_data_samples"] = first_data_samples
-            self.model_params["early_stopping_patience"] = early_stopping_patience
-            self.model_params["lr_reducer_patience"] = lr_reducer_patience
-            self.model_params["train_or_load"] = train_or_load
-            self.model_params["sampling_type"] = sampling_type
 
         self.date = datetime.datetime.now()
 
@@ -323,7 +327,7 @@ class Classification:
 
     def get_callbacks(self):
 
-        callback_dir = os.getcwd() + f'/saved_callbacks/{self.model_params["model_type"]}/{self.model_params["dataset"]}/{self.model_params["sampling_type"]}_{self.model_params["first_data_samples"]}'
+        callback_dir = os.getcwd() + f'/saved_callbacks/{self.model_params["model_type"]}/{self.model_params["dataset"]}/{self.model_params["sampling_type"]}_{self.model_params["first_data_samples"]}k'
 
         # save_dir = os.getcwd()+f'/trained_models/{self.model_type}/{self.dataset}/{"no sampling"}'
         model_name = self.model_params["model_type"] + '_model_' + str(self.date.day) + '_' + str(self.date.month) + '_' + str(
@@ -481,8 +485,26 @@ class Sampling:
 
         self.model_params={}
 
-        numeric_args=["goal","jump","validation_split","first_data_samples", "batch_size", "epochs", "early_stopping_patience", "lr_reducer_patience", "shuffle_training_data_seed"]
+        numeric_args=["goal","jump","first_data_samples", "batch_size", "epochs", "early_stopping_patience", "lr_reducer_patience", "shuffle_training_data_seed"]
         boolean_args=["shuffle_bool", "save_and_reload_bool", "load_saved_model_bool", "shuffle_training_data_bool"]
+        float_args=["validation_split"]
+
+        self.model_params["validation_split"] = validation_split
+        self.model_params["model_type"] = model_type.lower()
+        self.model_params["epochs"] = epochs
+        self.model_params["jump"] = jump
+        self.model_params["sampling_type"] = sampling_type.lower()
+        self.model_params["goal"] = goal
+        self.model_params["shuffle_bool"] = shuffle_bool
+        self.model_params["batch_size"] = batch_size
+        self.model_params["dataset"] = dataset
+        self.model_params["load_saved_model_bool"] = load_saved_model_bool
+        self.model_params["save_and_reload_bool"] = save_and_reload_bool
+        self.model_params["first_data_samples"] = first_data_samples
+        self.model_params["early_stopping_patience"] = early_stopping_patience
+        self.model_params["lr_reducer_patience"] = lr_reducer_patience
+        self.model_params["shuffle_training_data_seed"] = shuffle_training_data_seed
+        self.model_params["shuffle_training_data_bool"] = shuffle_training_data_bool
 
         if file_input_params:
 
@@ -492,31 +514,17 @@ class Sampling:
             for line in lines:
                 var, val = line.split(" ")
                 if var in numeric_args:
-                    val=int(val)
+                    self.model_params[var]=int(val)
+                elif var in float_args:
+                    self.model_params[var]=float(val)
                 elif var in boolean_args:
                     if val=="True":
-                        val=True
+                        self.model_params[var]=True
                     else:
-                        val=False
-                self.model_params[var]=val
+                        self.model_params[var]=False
+                else:
+                    self.model_params[var]=val
 
-        else:
-            self.model_params["validation_split"] = validation_split
-            self.model_params["model_type"] = model_type.lower()
-            self.model_params["epochs"] = epochs
-            self.model_params["jump"] = jump
-            self.model_params["sampling_type"] = sampling_type.lower()
-            self.model_params["goal"] = goal
-            self.model_params["shuffle_bool"] = shuffle_bool
-            self.model_params["batch_size"] = batch_size
-            self.model_params["dataset"] = dataset
-            self.model_params["load_saved_model_bool"] = load_saved_model_bool
-            self.model_params["save_and_reload_bool"] = save_and_reload_bool
-            self.model_params["first_data_samples"] = first_data_samples
-            self.model_params["early_stopping_patience"] = early_stopping_patience
-            self.model_params["lr_reducer_patience"] = lr_reducer_patience
-            self.model_params["shuffle_training_data_seed"] = shuffle_training_data_seed
-            self.model_params["shuffle_training_data_bool"] = shuffle_training_data_bool
 
         if self.model_params["dataset"] == "cifar10" or self.model_params["dataset"] == "mnist":
             output_layer_classes = 10
@@ -551,7 +559,7 @@ class Sampling:
         self.train_it, self.val_it = self.get_dataset()
 
         if self.model_params["save_and_reload_bool"]:
-            self.save_and_reload_dir = os.getcwd() + f'/reload_params/{self.model_params["model_type"]}/{self.model_params["dataset"]}/{self.model_params["sampling_type"]}_{self.model_params["first_data_samples"]}'
+            self.save_and_reload_dir = os.getcwd() + f'/reload_params/{self.model_params["model_type"]}/{self.model_params["dataset"]}/{self.model_params["sampling_type"]}_{self.model_params["first_data_samples"]}k'
 
             if not os.path.isdir(self.save_and_reload_dir):
                 os.makedirs(self.save_and_reload_dir)
@@ -561,20 +569,25 @@ class Sampling:
             if self.model_params["sampling_type"] == "mixedbayes":
                 self.model_sampling_data["least_confidence_jump"] = []
                 self.model_sampling_data["high_confidence_jump"] = []
+
+            # with open(self.save_and_reload_dir + '/model_params.pickle', 'wb') as handle:
+            #     pickle.dump(self.model_params, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            #
+            # with open(self.save_and_reload_dir + '/model_sampling_data.pickle', 'wb') as handle:
+            #     pickle.dump(self.model_sampling_data, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
         else:
-            with open('model_sampling_data.pickle', 'rb') as handle:
+            with open(self.save_and_reload_dir+'/model_sampling_data.pickle', 'rb') as handle:
                 self.model_sampling_data = pickle.load(handle)
 
-            with open('model_params.pickle', 'rb') as handle:
+            with open(self.save_and_reload_dir+'/model_params.pickle', 'rb') as handle:
                 self.model_params = pickle.load(handle)
 
-            # self.model=load_model()
+            self.model=load_model(self.save_and_reload_dir+'/latest_model')
 
         if self.model_params["sampling_type"] == "random":
           random_num = np.random.randint(self.model_params["first_data_samples"],self.x_train.shape[0],size=self.x_train.shape[0]-self.model_params["first_data_samples"])
           self.random_num= random_num
-
-
 
     def lr_schedule(self, epoch):
         lr = 1e-3
@@ -679,7 +692,7 @@ class Sampling:
 
     def get_callbacks(self):
 
-        callback_dir = os.getcwd() + f'/saved_callbacks/{self.model_params["model_type"]}/{self.model_params["dataset"]}/{self.model_params["sampling_type"]}_{self.model_params["first_data_samples"]}'
+        callback_dir = os.getcwd() + f'/saved_callbacks/{self.model_params["model_type"]}/{self.model_params["dataset"]}/{self.model_params["sampling_type"]}_{self.model_params["first_data_samples"]}k'
 
         if not os.path.isdir(callback_dir):
             os.makedirs(callback_dir)

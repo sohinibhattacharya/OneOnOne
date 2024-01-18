@@ -9,7 +9,7 @@ from OneOnOne import Sampling
 from os import path
 
 
-s=Sampling()
+s=Sampling(file_input_params=True, filepath="testfile.txt")
 print(s.model_params)
 s.initial_training()
 s.get_iterations()
