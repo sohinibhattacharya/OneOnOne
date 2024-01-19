@@ -5,7 +5,7 @@
   </a>
 </p>
 
-<h3 align="center"><span style="color:#FFC0CB">Your one-stop destination to utilize an interface like GoogleLens with just one line of code.</span></h3>
+<h3 align="center"><span style="color:#FFC0CB">Your one-stop destination to utilize Active Learning Sampling methods with just one line of code.</span></h3>
 
 <h4 align="center">
 A Python library meant to simplify your life by providing you with popular active-learning sampling methods on image classification. You can train your models from scratch by tweaking a few values. Or if you want to try out pre-trained model like ResNet50, EfficientNetVB6, VGG19, etc., don't worry! This library has got you covered. From Bayesian optimization for least and high-confidence parameter tuning to margin sampling, you can try it out with just one simple command.
