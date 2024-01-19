@@ -1,6 +1,12 @@
 
+from bs4 import BeautifulSoup
+import re
+
+
 class HTMLparser:
     def __init__(self, words):
+        warnings.filterwarnings("ignore")
+
         self.words = words
     def clean_html(self,raw_html):
         clean_brackets = re.compile('<.*?>')
@@ -21,12 +27,12 @@ class HTMLparser:
 
         context=str(p)
 
-        cleaned_text=self.cleanhtml(context)
+        cleaned_text=self.clean_html(context)
 
         return cleaned_text
 
 
-    def get_context(self):
+    def get_context_text(self):
 
         full_context = ""
 

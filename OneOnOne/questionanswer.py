@@ -1,11 +1,20 @@
+from transformers import pipeline
+from transformers import BlipProcessor, BlipForQuestionAnswering
+from transformers import GPT2Tokenizer, GPT2ForQuestionAnswering
+from transformers import AutoTokenizer, AutoModel
+from transformers import AutoTokenizer, RobertaForQuestionAnswering
+from transformers import BertForQuestionAnswering, BertTokenizer
+from transformers import AutoTokenizer, ErnieModel
+from transformers import pipeline, Conversation
+
 class QuestionAnswer:
     def __init__(self, context, chatbot="bert"):
+        warnings.filterwarnings("ignore")
 
         self.exit_commands = ("no", "n", "quit", "pause", "exit", "goodbye", "bye", "later", "stop")
         self.positive_commands = ("y", "yes", "yeah", "sure", "yup", "ya", "probably", "maybe")
-        self.max_length = 4096
-
         self.context = context
+        self.max_length = len(self.context)
         self.chatbot = chatbot.lower()
 
         if self.chatbot == "bert":
@@ -13,57 +22,80 @@ class QuestionAnswer:
             self.tokenizer = BertTokenizer.from_pretrained('bert-large-uncased-whole-word-masking-finetuned-squad')
 
         elif self.chatbot == "gpt2":
-            self.model = GPT2Model.from_pretrained("gpt2")
-            self.tokenizer = AutoTokenizer.from_pretrained("gpt2")
-
-        elif self.chatbot == "ernie":
-            self.model = ErnieModel.from_pretrained("nghuyong/ernie-1.0-base-zh")
-            self.tokenizer = AutoTokenizer.from_pretrained("nghuyong/ernie-1.0-base-zh")
+            self.model = GPT2ForQuestionAnswering.from_pretrained("gpt2")
+            self.tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
 
         elif self.chatbot == "roberta":
             self.model = RobertaForQuestionAnswering.from_pretrained("deepset/roberta-base-squad2")
             self.tokenizer = AutoTokenizer.from_pretrained("deepset/roberta-base-squad2")
 
-        elif self.chatbot == "vqa":
-            self.tokenizer = BlipProcessor.from_pretrained("Salesforce/blip-vqa-base")
-            self.model = BlipForQuestionAnswering.from_pretrained("Salesforce/blip-vqa-base").to("cuda")
+        # elif self.chatbot == "ernie":
+        #     self.model = ErnieModel.from_pretrained("nghuyong/ernie-1.0-base-zh")
+        #     self.tokenizer = AutoTokenizer.from_pretrained("nghuyong/ernie-1.0-base-zh")
+
+        # elif self.chatbot == "vqa":
+        #     self.model = BlipForQuestionAnswering.from_pretrained("Salesforce/blip-vqa-base").to("cuda")
+        #     self.tokenizer = BlipProcessor.from_pretrained("Salesforce/blip-vqa-base")
 
         else:
             print("invalid input")
 
     def question_answer(self, question):
 
-        input_ids = self.tokenizer.encode(question, self.context)
+        if self.chatbot=="bert":
+            c = self.context[:512]
 
-        tokens = self.tokenizer.convert_ids_to_tokens(input_ids)
+            input_ids = self.tokenizer.encode(question, c, add_special_tokens=True, truncation=True, max_length=len(context))
 
-        sep_idx = input_ids.index(self.tokenizer.sep_token_id)
+            tokens = self.tokenizer.convert_ids_to_tokens(input_ids)
 
-        num_seg_a = sep_idx + 1
+            # tokens = self.tokenizer.tokenize(self.context, max_length=self.max_length, truncation=True)
 
-        num_seg_b = len(input_ids) - num_seg_a
+            sep_idx = input_ids.index(self.tokenizer.sep_token_id)
 
-        segment_ids = [0] * num_seg_a + [1] * num_seg_b
+            num_seg_a = sep_idx + 1
 
-        assert len(segment_ids) == len(input_ids)
+            num_seg_b = len(input_ids) - num_seg_a
 
-        output = self.model(torch.tensor([input_ids]), token_type_ids=torch.tensor([segment_ids]))
+            segment_ids = [0] * num_seg_a + [1] * num_seg_b
 
-        answer_start = torch.argmax(output.start_logits)
-        answer_end = torch.argmax(output.end_logits)
+            assert len(segment_ids) == len(input_ids)
 
-        if answer_end >= answer_start:
-            answer = tokens[answer_start]
-            for i in range(answer_start + 1, answer_end + 1):
-                if tokens[i][0:2] == "##":
-                    answer += tokens[i][2:]
-                else:
-                    answer += " " + tokens[i]
+            output = self.model(torch.tensor([input_ids]), token_type_ids=torch.tensor([segment_ids]))
 
-        if answer.startswith("[CLS]"):
-            answer = "Sorry! Unable to find the answer to your question. Please ask another question."
+            answer_start = torch.argmax(output.start_logits)
+            answer_end = torch.argmax(output.end_logits)
 
-        answer = "\nAnswer:\n{}".format(answer.capitalize())
+            if answer_end >= answer_start:
+                answer = tokens[answer_start]
+                for i in range(answer_start + 1, answer_end + 1):
+                    if tokens[i][0:2] == "##":
+                        answer += tokens[i][2:]
+                    else:
+                        answer += " " + tokens[i]
+
+            if answer.startswith("[CLS]") or answer=="":
+                answer = "Sorry! Unable to find the answer to your question. Please ask another question."
+
+            answer = f"\nAnswer:\n{format(answer.capitalize())}"
+
+        elif self.chatbot=="gpt2" or self.chatbot=="roberta":
+            inputs = self.tokenizer(question, self.context, return_tensors="pt", truncation='longest_first', )
+
+            input_ids = self.tokenizer.encode(question, self.context, max_length=self.max_length)
+
+            with torch.no_grad():
+                outputs = self.model(**inputs)
+
+            answer_start_index = outputs.start_logits.argmax()
+            answer_end_index = outputs.end_logits.argmax()
+            predict_answer_tokens = inputs.input_ids[0, answer_start_index: answer_end_index + 1]
+            output_ids = self.tokenizer.decode(predict_answer_tokens)
+
+            if output_ids == "" or output_ids.startswith("[CLS]") or output_ids== "<s>":
+                output_ids = "Sorry! Unable to find the answer to your question. Please ask another question."
+
+            answer = f"\nAnswer:\n {format(output_ids.capitalize())}"
 
         return answer
 
@@ -81,8 +113,4 @@ class QuestionAnswer:
                 break
 
             print(self.question_answer(question))
-
-
-
-
 

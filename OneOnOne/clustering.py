@@ -1,3 +1,5 @@
+import seaborn as sns
+
 class Clustering:
     def __init__(self, data, score_type="silhouette", pca_plot=False, type="kmeans"):
 
@@ -165,6 +167,7 @@ class Clustering:
         print(kl.elbow)
 
         return kl.elbow
+
 
 
 

@@ -5,11 +5,15 @@
   </a>
 </p>
 
-<h3 align="center"><span style="color:#FFC0CB">Your one-stop destination to utilize an interface like GoogleLens with just one line of code.</span></h3>
+<h3 align="center"><span style="color:#FFC0CB">Your one-stop destination to utilize Active Learning Sampling methods with just one line of code.</span></h3>
 
 <h4 align="center">
-A python library meant to simplify your life by providing you with pre-trained models like ResNet50, EfficientNetVB6, VGG19, etc.
-You can simply opt for training your own models from scratch by just tweaking a few values. If you want to try popular active-learning sampling methods on image classification, don't worry! This library has got you covered. Along with that for simple-bridging of NLP with Image Classification and utilization of basic use-cases of NLP frameworks, we have context-deciders, HTML parsers and simple chatbot object classes, to create an interface similar to Google Lens. You input an image or item that you are curious about, and you can ask one-on-one questions from the chatbot. You can use speech-to-text or translate image text into your desired language. This is made possible by using the tiny imagenet dataset.
+A Python library meant to simplify your life by providing you with popular active-learning sampling methods on image classification. You can train your models from scratch by tweaking a few values. Or if you want to try out pre-trained model like ResNet50, EfficientNetVB6, VGG19, etc., don't worry! This library has got you covered. From Bayesian optimization for least and high-confidence parameter tuning to margin sampling, you can try it out with just one simple command.
+</h4>
+
+
+<h4 align="center">
+Along with that, for simple bridging of NLP with Image Classification and utilization of basic use-cases of NLP frameworks, we have context-deciders, HTML parsers and simple chatbot object classes to create an interface similar to Google Lens. You input an image or item you are curious about, and you can ask one-on-one questions from the chatbot. You can use speech-to-text or translate image text into your desired language. This is made possible by using the tiny imagenet dataset.
 </h4>
 
 <h4 align="center">____________________________________________________________________________</h4>
@@ -49,7 +53,21 @@ sampling.initial_training()
 history_data=sampling.get_iterations()
 ```
 
-This will use the bayes optimization method to find the optimal coefficient for highest confidence and least confidence samples.
+This will use the Bayesian optimization method to find the optimal coefficient for highest confidence and least confidence samples.
+
+
+<dl>
+  <dt><span style="color:#FFC0CB">or,</span>
+</dl>
+
+```python
+sampling=Sampling(file_input_params=True, filepath="parameters.txt")
+sampling.model_params()
+```
+
+If you intend to use a file to input the parameters for the model sampling, this will help you out. Only the mentioned parameters will be tuned. The other parameters will be default values. Please look at the sample [parameters.txt] file for format clarifications.
+
+
 
 <dl>
   <dt><span style="color:#FFC0CB">or, download pretrained models with your desired specifications!</span>
@@ -80,7 +98,7 @@ list_of_context_words=decider.decide_context()
 or, just let it choose a random image for you! And ask questions.
 
 <dl>
-  <dt><span style="color:#FFC0CB">If you want your predicted class(es) of the input image to be used as the context for your chatbot, simply run, </span>
+  <dt><span style="color:#FFC0CB"> style="color:#FFC0CB">If you want your predicted class(es) of the input image to be used as the context for your chatbot, simply run, </span>
 </dl>
 
 ```python

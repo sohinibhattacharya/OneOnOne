@@ -1,2 +1,0 @@
-load_saved_model_bool True
-validation_split 0.9

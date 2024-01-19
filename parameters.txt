@@ -1,0 +1,5 @@
+validation_split 0.4
+early_stopping_patience 30
+first_data_samples 15000
+load_saved_model_bool True
+
