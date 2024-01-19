@@ -97,10 +97,6 @@ list_of_context_words=decider.decide_context()
 ```
 or, just let it choose a random image for you! And ask questions.
 
-<dl>
-  <dt><span style="color:#FFC0CB"> style="color:#FFC0CB">If you want your predicted class(es) of the input image to be used as the context for your chatbot, simply run, </span>
-</dl>
-
 ```python
 from OneOnOne import HTMLparser
 from OneOnOne import QuestionAnswer
@@ -111,6 +107,8 @@ text=parser.get_context_text()
 qa=QuestionAnswer(text,"roberta")
 qa.ask()
 ```
+Getting the text content based on the context words predicted by the model and asking subsequent questions on it.
+
 
 
 <h4 align="center">____________________________________________________________________________</h4>
