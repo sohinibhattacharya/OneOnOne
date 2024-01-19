@@ -9,7 +9,9 @@
 
 <h4 align="center">
 A Python library meant to simplify your life by providing you with popular active-learning sampling methods on image classification. You can train your models from scratch by tweaking a few values. Or if you want to try out pre-trained model like ResNet50, EfficientNetVB6, VGG19, etc., don't worry! This library has got you covered. From Bayesian optimization for least and high-confidence parameter tuning to margin sampling, you can try it out with just one simple command.
-  
+
+
+
 Along with that, for simple bridging of NLP with Image Classification and utilization of basic use-cases of NLP frameworks, we have context-deciders, HTML parsers and simple chatbot object classes to create an interface similar to Google Lens. You input an image or item you are curious about, and you can ask one-on-one questions from the chatbot. You can use speech-to-text or translate image text into your desired language. This is made possible by using the tiny imagenet dataset.
 </h4>
 
